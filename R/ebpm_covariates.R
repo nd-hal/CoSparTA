@@ -1,3 +1,66 @@
+#' Empirical Bayes Poisson Mean Estimation with Covariate-Dependent Rates
+#'
+#' @description
+#' Fits a spike-and-slab point-gamma prior to a vector of counts \code{x}
+#' where the Poisson rate is modulated by individual-level covariates. The
+#' effective rate for observation \eqn{i} is
+#' \eqn{\lambda_i = \beta \cdot \exp(X_i^\top \gamma)},
+#' so that the prior mean scales multiplicatively with covariates. Prior
+#' parameters \eqn{(\pi_0, \alpha, \beta, \gamma)} are estimated by maximizing
+#' the marginal likelihood via \code{nlm} (with \code{optim} as fallback).
+#' This function is the core building block of the covariate-aware mode update
+#' in \code{\link{CxtEBTD}}.
+#'
+#' @param x Non-negative integer vector of observed counts.
+#' @param s Numeric scalar or vector of length \code{length(x)} giving
+#'   per-observation exposure/scaling factors. Default \code{1}.
+#' @param X Numeric covariate matrix of dimension \code{n x q}, where rows
+#'   correspond to observations in \code{x} and columns to covariates.
+#' @param g_init Optional numeric vector of starting values in the order
+#'   \code{c(pi0, alpha, beta, gamma_1, ..., gamma_q)}. If \code{NULL},
+#'   initialization uses a baseline \code{ebpm::ebpm_point_gamma} fit with
+#'   \code{gamma = 0}. Default \code{NULL}.
+#' @param control Optional list of control arguments passed to \code{nlm}.
+#'   Defaults: \code{stepmax = 1}, \code{gradtol = 1e-6},
+#'   \code{steptol = 1e-8}, \code{iterlim = 1000},
+#'   \code{check.analyticals = FALSE}.
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{fitted_g}{List of estimated prior parameters:
+#'     \code{pi0} — spike (point-mass at zero) probability;
+#'     \code{shape} — gamma shape parameter \eqn{\alpha};
+#'     \code{scale} — gamma scale parameter \eqn{1/\beta};
+#'     \code{gamma} — covariate coefficient vector of length \code{q};
+#'     \code{type} — always \code{"covariate_dependent"}.}
+#'   \item{posterior}{Data frame with one row per observation and columns:
+#'     \code{mean} — posterior mean \eqn{E[\theta_i \mid x_i]};
+#'     \code{mean_log} — posterior log-mean \eqn{E[\log\theta_i \mid x_i]}
+#'     (\code{-Inf} for observations with \eqn{x_i = 0}).}
+#'   \item{log_likelihood}{Maximized marginal log-likelihood.}
+#'   \item{convergence_code}{Optimizer convergence code. For \code{nlm}:
+#'     1–2 indicate convergence; 3–5 indicate potential issues (see
+#'     \code{?nlm}). For \code{optim} fallback: 0 = converged.}
+#' }
+#'
+#' @seealso \code{\link{CxtEBTD}}, \code{\link[ebpm]{ebpm_point_gamma}}
+#'
+#' @examples
+#' \dontrun{
+#' set.seed(1)
+#' n <- 200
+#' X <- matrix(rnorm(n * 2), nrow = n)
+#' true_gamma <- c(0.4, -0.3)
+#' x <- rpois(n, lambda = exp(0.5 + X %*% true_gamma))
+#'
+#' fit <- ebpm_point_gamma_multiplier_covariates(x, s = 1, X = X)
+#' fit$fitted_g$gamma     # estimated covariate coefficients
+#' fit$fitted_g$pi0       # estimated spike probability
+#' head(fit$posterior)    # posterior means and log-means
+#' }
+#'
+#' @export
+
 # Taylor approximation for lgamma(a+x) - lgamma(a) for small x
 # Adapted from ebpm package (DongyueXie/ebpm) to avoid ::: call
 lgamma_diff_taylor_local <- function(x, dx) {
