@@ -1,6 +1,4 @@
-# Internal helper functions shared across the package.
-# Source: ebtd_cov_2509.R (canonical versions)
-
+#' @keywords internal
 ebpmf_identity_init = function(X,
                                K,
                                init,
@@ -60,7 +58,7 @@ ebpmf_identity_init = function(X,
 
 }
 
-
+#' @keywords internal
 calc_qz = function(n,p,w,K,ql,qf,qw){ # 28
 
   qz = array(dim = c(n,p,w,K))
@@ -83,7 +81,7 @@ calc_qz = function(n,p,w,K,ql,qf,qw){ # 28
 }
 
 
-#'@title rank 1 update of the model
+#' @keywords internal
 stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.fn.w,
                              res, fix_L, fix_F, fix_W, Xcov = NULL){
 
@@ -130,7 +128,7 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
 }
 
 
-# when an approximated elbo is needed. This is useful when smooth F.
+#' @keywords internal
 calc_approx_elbo_F = function(x,alpha,K,ebpm.fn.f,res,ebps_control){
 
   for(k in 1:K){
@@ -156,8 +154,24 @@ calc_approx_elbo_F = function(x,alpha,K,ebpm.fn.f,res,ebps_control){
 }
 
 
-#'@title Default parameters of smooth split
-#'@export
+#' Default control parameters for smooth factor estimation
+#'
+#' @description
+#' Returns a list of default control parameters for the wavelet-based smooth
+#' factor estimation step in \code{\link{CxtEBTD}}. Pass the output as the
+#' \code{smooth_control} argument to override individual settings.
+#'
+#' @return A named list with fields: \code{wave_trans}, \code{ndwt_method},
+#'   \code{filter.number}, \code{family}, \code{ebnm_params},
+#'   \code{maxiter}, \code{maxiter_vga}, \code{make_power_of_2},
+#'   \code{vga_tol}, \code{tol}, \code{warmstart},
+#'   \code{convergence_criteria}, \code{m_init_method_for_init}.
+#'
+#' @examples
+#' ctrl <- ebpmf_identity_smooth_control_default()
+#' ctrl$filter.number <- 4  # override wavelet filter
+#'
+#' @export
 ebpmf_identity_smooth_control_default = function(){
   list(wave_trans='ndwt',
        ndwt_method = "ti.thresh",
@@ -174,7 +188,7 @@ ebpmf_identity_smooth_control_default = function(){
        m_init_method_for_init = 'vga')
 }
 
-
+#' @keywords internal
 calc_stm_obj = function(x,n,p,w,K,res,non0_idx){
   qz = calc_qz(n,p,w, K,res$ql,res$qf,res$qw) # update; qz is n*p*w*K
 
