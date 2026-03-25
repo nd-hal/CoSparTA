@@ -65,7 +65,7 @@
 # Adapted from ebpm package (DongyueXie/ebpm) to avoid ::: call
 
 #' @keywords internal
-lgamma_diff_taylor_local <- function(x, dx) {
+.lgamma_diff_taylor_local <- function(x, dx) {
   c <- x
   out <- digamma(x) * dx + 1/2 * psigamma(c, deriv = 1) * dx^2
   return(out)
@@ -273,7 +273,7 @@ dnbinom_cts_log_vec <- function(x, a, prob){
   lgamma_diff = lgamma(a + x)  - lgamma(a)
 
   subset = (lgamma_diff==0)  ## can occur when x very small compared with a
-  lgamma_diff[subset] = lgamma_diff_taylor_local(a[subset], x[subset])
+  lgamma_diff[subset] = .lgamma_diff_taylor_local(a[subset], x[subset])
 
   return(a*log(prob) + tmp + lgamma_diff - lgamma(x+1))
 }
