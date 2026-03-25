@@ -1,8 +1,11 @@
 Package: CxtEBTD
 Title: Covariate-aware Empirical Bayes Tensor Decomposition
 Version: 0.1.0
-Authors@R: person("Xinyuan", "Zhang", role = c("aut", "cre"),
-             email = "xzhang38@nd.edu")
+Authors@R: c(
+    person("Xinyuan", "Zhang", role = c("aut", "cre"),
+           email = "xzhang38@nd.edu"),
+    person("Junhui", "Cai", role = c("aut", "cre"),
+           email = "jcai2@nd.edu"))
 Description: Empirical Bayes Poisson tensor decomposition with
   spike-and-slab priors and optional covariate integration.
 License: MIT + file LICENSE
