@@ -93,13 +93,13 @@
 #'
 #' @export
 
-CxtEBTD = function(X,K,Xcov,
+CxtEBTD = function(X,K,Xcov=NULL,
                                     lib_size = NULL,
                                     init = 'fasttopics',
                                     maxiter=100,
                                     maxiter_init = 100,
                                     tol=1e-8,
-                                    ebpm.fn=c(ebpm::ebpm_point_gamma,smashrgen::ebps), # need add another function
+                                    ebpm.fn=c(ebpm::ebpm_point_gamma,smashrgen::ebps,smashrgen::ebps), # need add another function
                                     fix_L = FALSE, fix_F = FALSE, fix_W = FALSE,
                                     smooth_F = T,
                                     #smooth_control=list(),
@@ -132,8 +132,10 @@ CxtEBTD = function(X,K,Xcov,
   w = dim(X)[3]
   n_points = n*p * w
   ######## Xcov
+  if (!is.null(Xcov)) {
+  Xcov <- Xcov[!users_zero, , drop = FALSE]
+  }
 
-  Xcov <- Xcov[!users_zero,]
   if(is.null(lib_size)){
     lib_size = rep(1,n) # what is this?
   }
