@@ -1,3 +1,13 @@
+# Taylor approximation for lgamma(a+x) - lgamma(a) for small x
+# Adapted from ebpm package (DongyueXie/ebpm) to avoid ::: call
+
+#' @keywords internal
+.lgamma_diff_taylor_local <- function(x, dx) {
+  c <- x
+  out <- digamma(x) * dx + 1/2 * psigamma(c, deriv = 1) * dx^2
+  return(out)
+}
+
 #' Empirical Bayes Poisson Mean Estimation with Covariate-Dependent Rates
 #'
 #' @description
@@ -60,17 +70,6 @@
 #' }
 #'
 #' @export
-
-# Taylor approximation for lgamma(a+x) - lgamma(a) for small x
-# Adapted from ebpm package (DongyueXie/ebpm) to avoid ::: call
-
-#' @keywords internal
-.lgamma_diff_taylor_local <- function(x, dx) {
-  c <- x
-  out <- digamma(x) * dx + 1/2 * psigamma(c, deriv = 1) * dx^2
-  return(out)
-}
-
 ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, control = NULL) {
 
   # Handle inputs
