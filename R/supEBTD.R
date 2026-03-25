@@ -1,4 +1,98 @@
-#print("source JC ebptd function")
+#' Covariate-aware Empirical Bayes Tensor Decomposition
+#'
+#' @description
+#' Fits a non-negative CP tensor decomposition using empirical Bayes priors with
+#' spike-and-slab structure and Poisson likelihood. When covariates are supplied
+#' via \code{Xcov}, they enter the generative model directly through
+#' covariate-dependent Poisson rates of the form
+#' \eqn{\lambda_i = \beta \cdot \exp(X_i^\top \gamma)}, enabling simultaneous
+#' decomposition and covariate effect estimation. Without covariates
+#' (\code{Xcov = NULL}), the method reduces to unsupervised empirical Bayes
+#' Poisson tensor decomposition.
+#'
+#' @param X A 3-dimensional non-negative integer array of dimensions
+#'   \code{n x p x w}, representing observations (e.g., users), time points,
+#'   and channels respectively.
+#' @param K Integer. Number of components (CP rank) for the decomposition.
+#' @param Xcov Numeric covariate matrix of dimension \code{n x q}, where rows
+#'   correspond to observations and columns to covariates. Pass \code{NULL} for
+#'   unsupervised decomposition. Default \code{NULL}.
+#' @param lib_size Numeric vector of length \code{n} giving per-observation
+#'   library sizes (exposure/scaling factors). Default \code{NULL}, which sets
+#'   all sizes to 1.
+#' @param init Character string specifying the initialization method.
+#'   Default \code{'fasttopics'}.
+#' @param maxiter Integer. Maximum number of EM iterations. Default \code{100}.
+#' @param maxiter_init Integer. Maximum number of iterations for the
+#'   initialization step. Default \code{100}.
+#' @param tol Numeric. Convergence tolerance. Iterations stop when the change
+#'   in the objective is below this threshold. Default \code{1e-8}.
+#' @param ebpm.fn A single function or list of up to three functions specifying
+#'   the empirical Bayes Poisson mean prior for the L, F, and W modes
+#'   respectively. Default \code{c(ebpm::ebpm_point_gamma, smashrgen::ebps)}.
+#' @param fix_L Logical. If \code{TRUE}, the observation-mode loadings are held
+#'   fixed at initialization. Default \code{FALSE}.
+#' @param fix_F Logical. If \code{TRUE}, the time-mode factors are held fixed.
+#'   Default \code{FALSE}.
+#' @param fix_W Logical. If \code{TRUE}, the channel-mode weights are held
+#'   fixed. Default \code{FALSE}.
+#' @param smooth_F Logical. If \code{TRUE}, applies smoothing to time-mode
+#'   factors. Default \code{TRUE}.
+#' @param printevery Integer. Number of iterations between progress messages
+#'   when \code{verbose = TRUE}. Default \code{10}.
+#' @param verbose Logical. If \code{TRUE}, prints initialization and iteration
+#'   progress. Default \code{TRUE}.
+#' @param adj_LF_scale Logical. If \code{TRUE}, rescales L and F at each
+#'   iteration to balance their column norms. Default \code{TRUE}.
+#' @param convergence_criteria Character string specifying the convergence
+#'   criterion: \code{'mKLabs'} (mean KL divergence, default) or
+#'   \code{'ELBO'} (evidence lower bound).
+#' @param U1_true Optional matrix of true observation-mode factors, used to
+#'   track reconstruction error during simulation studies. Default \code{NULL}.
+#' @param U2_true Optional matrix of true time-mode factors for simulation
+#'   evaluation. Default \code{NULL}.
+#' @param U3_true Optional matrix of true channel-mode factors for simulation
+#'   evaluation. Default \code{NULL}.
+#'
+#' @return A named list with the following elements:
+#' \describe{
+#'   \item{EL}{Placeholder string; the observation-mode factor matrix is
+#'     accessible as \code{fit$res$ql$El} (dimensions \code{n x K}).}
+#'   \item{EF}{Placeholder string; the time-mode factor matrix is accessible
+#'     as \code{fit$res$qf$Ef} (dimensions \code{p x K}).}
+#'   \item{EF_smooth}{Smoothed time-mode factors (currently \code{NULL}).}
+#'   \item{elbo}{Final ELBO value computed after the last iteration.}
+#'   \item{obj_trace}{Numeric vector of objective values at each iteration.}
+#'   \item{res}{List of variational posterior summaries. Key fields:
+#'     \code{res$ql$El} — observation loadings (\code{n x K});
+#'     \code{res$qf$Ef} — time factors (\code{p x K});
+#'     \code{res$qw$Ew} — channel weights (\code{w x K});
+#'     \code{res$ql$Elogl}, \code{res$qf$Elogf}, \code{res$qw$Elogw} —
+#'     corresponding log-expectation matrices.}
+#'   \item{diff_U}{List of three vectors recording per-iteration reconstruction
+#'     error relative to \code{U1_true}, \code{U2_true}, \code{U3_true}.
+#'     Only meaningful when true factors are supplied.}
+#'   \item{run_time}{Elapsed computation time as a \code{difftime} object.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' set.seed(42)
+#' X <- array(rpois(20 * 12 * 4, lambda = 1.5), dim = c(20, 12, 4))
+#' Xcov <- matrix(rnorm(20 * 2), nrow = 20, ncol = 2)
+#'
+#' # Supervised decomposition with covariates
+#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov, maxiter = 50, verbose = FALSE)
+#' EL <- fit$res$ql$El   # 20 x 3 loading matrix
+#' EF <- fit$res$qf$Ef   # 12 x 3 factor matrix
+#' EW <- fit$res$qw$Ew   # 4 x 3 weight matrix
+#'
+#' # Unsupervised decomposition (no covariates)
+#' fit0 <- CxtEBTD(X, K = 3, Xcov = NULL, maxiter = 50, verbose = FALSE)
+#' }
+#'
+#' @export
+
 CxtEBTD = function(X,K,Xcov,
                                     lib_size = NULL,
                                     init = 'fasttopics',
