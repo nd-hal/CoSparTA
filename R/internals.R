@@ -91,8 +91,13 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
   if(!fix_L) {
     resrev = res
     l_scale = sum(resrev$qf$Ef[,k])*sum(resrev$qw$Ew[,k])*resrev$lib_size #s
+    if (!is.null(Xcov)) {
+      fit = ebpm.fn.l(l_seq, l_scale, Xcov)
+    } else {
+      fit = ebpm.fn.l(l_seq, l_scale)
+    }
 
-    fit = ebpm.fn.l(l_seq,l_scale,Xcov)
+    #fit = ebpm.fn.l(l_seq,l_scale,Xcov)
     res$ql$El[,k] = fit$posterior$mean
     res$ql$Elogl[,k] = fit$posterior$mean_log
     res$Hl[k] = calc_H(l_seq,l_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
