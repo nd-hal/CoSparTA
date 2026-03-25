@@ -63,6 +63,8 @@
 
 # Taylor approximation for lgamma(a+x) - lgamma(a) for small x
 # Adapted from ebpm package (DongyueXie/ebpm) to avoid ::: call
+
+#' @keywords internal
 lgamma_diff_taylor_local <- function(x, dx) {
   c <- x
   out <- digamma(x) * dx + 1/2 * psigamma(c, deriv = 1) * dx^2
@@ -183,6 +185,7 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
   ))
 }
 
+#' @keywords internal
 # Objective function
 pg_multiplier_nlm_fn <- function(par, x, s, X, n_gamma) {
 
@@ -236,6 +239,7 @@ pg_multiplier_nlm_fn <- function(par, x, s, X, n_gamma) {
   return(-total_ll)
 }
 
+#' @keywords internal
 # Parameter transformation functions
 transform_param_multiplier <- function(par, n_gamma) {
   # par = (pi0, alpha, beta, gamma)
@@ -247,6 +251,7 @@ transform_param_multiplier <- function(par, n_gamma) {
   return(transformed)
 }
 
+#' @keywords internal
 transform_param_back_multiplier <- function(par, n_gamma) {
   # par = (logit_pi0, log_alpha, log_beta, gamma)
   original <- par
@@ -257,6 +262,7 @@ transform_param_back_multiplier <- function(par, n_gamma) {
   return(original)
 }
 
+#' @keywords internal
 # it is equivalent to dnbinom in R wiht log = T when X is integer; I allow  it  to compute when x is not integer
 dnbinom_cts_log_vec <- function(x, a, prob){
   #browser()
