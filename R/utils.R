@@ -1,7 +1,19 @@
-#'@title Make Init L and F on similar scale
-#'@param L N by K loading matrix
-#'@param FF p by K factor matrix
-#'@export
+#' Rescale loadings and factors to similar column norms
+#'
+#' @description
+#' Adjusts the column scales of L and F so that their geometric mean is
+#' preserved. Used for numerical stability when K > 1.
+#'
+#' @param L Numeric matrix of dimensions \code{n x K} (observation loadings).
+#' @param FF Numeric matrix of dimensions \code{p x K} (time factors).
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{L_init}{Rescaled loading matrix, same dimensions as \code{L}.}
+#'   \item{F_init}{Rescaled factor matrix, same dimensions as \code{FF}.}
+#' }
+#' @export
+
 adjLF = function(L,FF){
   gammaL = colSums(L)
   gammaF = colSums(FF)
@@ -11,16 +23,34 @@ adjLF = function(L,FF){
   return(list(L_init = L, F_init=FF))
 }
 
-#'@title Log transformation of scRNA-seq count matrix for EBMF
-#'@export
+#' Log-transformation of count matrix for empirical Bayes matrix factorization
+#'
+#' @description
+#' Applies a library-size normalized log transformation suitable as
+#' preprocessing input for EBMF methods.
+#'
+#' @param Y Non-negative integer count matrix (\code{n x p}).
+#'
+#' @return A numeric matrix of the same dimensions as \code{Y} with
+#'   log-transformed, library-size normalized values.
+#' @export
 log_for_ebmf = function(Y){
   log(1+median(rowSums(Y))/0.5*Y/rowSums(Y))
 }
 
 
-#'@title calculate mean KL divergence of 2 nonnegative matrices
-#'@export
+#' Mean KL divergence between two non-negative matrices
 #'
+#' @description
+#' Computes the mean generalized KL divergence
+#' \eqn{D(A \| B) = A \log(A/B) - A + B}, averaged over all elements.
+#' Used as a convergence criterion in \code{\link{CxtEBTD}}.
+#'
+#' @param A Non-negative numeric matrix or vector (observed).
+#' @param B Non-negative numeric matrix or vector (fitted), same dimensions as \code{A}.
+#'
+#' @return A single numeric value giving the mean KL divergence.
+#' @export
 
 mKL = function(A,B){
   D = A*log(A/B)-A+B
@@ -28,11 +58,22 @@ mKL = function(A,B){
 }
 
 
-#'@title standard loadings and factors from Poisson matrix Factorization
-#'@param L: n by k matrix
-#'@param FF: k by p matrix
-#'@export
+#' Standardize Poisson matrix factorization to multinomial parameterization
 #'
+#' @description
+#' Converts a Poisson factorization \eqn{X \approx L F^\top} into a
+#' standardized form where columns of F sum to 1 and L absorbs the scale.
+#'
+#' @param FF Numeric matrix of dimensions \code{p x K} (factors).
+#' @param L Numeric matrix of dimensions \code{n x K} (loadings).
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{FF}{Column-normalized factor matrix (\code{p x K}).}
+#'   \item{L}{Rescaled loading matrix (\code{n x K}).}
+#'   \item{s}{Numeric vector of length \code{n} giving row scales.}
+#' }
+#' @export
 
 poisson_to_multinom <- function (FF, L) {
   L <- t(t(L) * colSums(FF))
@@ -42,28 +83,31 @@ poisson_to_multinom <- function (FF, L) {
   return(list(FF = FF,L = L,s = s))
 }
 
-#poisson_to_libsize(F_init,L_init,lib_size)
+#' @keywords internal
 poisson_to_libsize <- function (FF, L, lib_size) {
   res = poisson_to_multinom(FF,L)
   size = res$s/lib_size
   multinom_to_poisson(res$FF,res$L,size)
 }
 
+#' @keywords internal
 multinom_to_poisson <- function (FF, L,size) {
   L = L * size
   res = adjLF(L,FF)
   return(list(FF = res$F_init,L = res$L_init))
 }
 
+#' @keywords internal
 scale.cols <- function (A)
   apply(A,2,function (x) x/sum(x))
 
-
+#' @keywords internal
 calc_EZ = function(x, prob){ # this is what's used in ebpmf_identity
   Ez = sparseMatrix(i = x$i, j = x$j, x = x$x * prob)
   return(list(rs = Matrix::rowSums(Ez), cs = Matrix::colSums(Ez)))
 }
 
+#' @keywords internal
 softmax3d=function(x){ # updated
   #x = x - array(apply(x,c(1,2),max),dim=dim(x))
   x = exp(x)
@@ -73,12 +117,13 @@ softmax3d=function(x){ # updated
   return(p)
 }
 
+#' @keywords internal
 rowMax = function(X){
   do.call(pmax.int, c(na.rm = TRUE, as.data.frame(X)))
 }
 
 
-# to replace Matrix & summary command for tensor
+#' @keywords internal
 rbind_sparse_matrix <- function(X, reindex = F) {
   # X is input matrix
   convs <- NULL
@@ -115,6 +160,7 @@ calc_H = function(x,s,loglik,pm,pmlog){ # this calculates entropy
   H
 }
 
+#' @keywords internal
 calc_EZ_3d <- function(x,prob,n,p,w){ #29
 
   x$prob_x = x$v*prob
@@ -129,12 +175,13 @@ calc_EZ_3d <- function(x,prob,n,p,w){ #29
 }
 
 
-# This is for a part calculating ELBO; replace the tcrossprod only part
+
+#' @keywords internal
 cr3d <- function(ew,res=parent.frame()$res){ # check
   sum(ew*tcrossprod(res$lib_size*res$ql$El,res$qf$Ef))
 }
 
-
+#' @keywords internal
 scale_to_norm1 <- function(df) {
   # Function to calculate the norm of a vector
   norm <- function(x) sqrt(sum(x^2))
@@ -145,7 +192,7 @@ scale_to_norm1 <- function(df) {
   return((scaled_df))
 }
 
-
+#' @keywords internal
 which_rank <- function(U, Uhat) {
   U_norm <- U/norm(matrix(U), type = "F")
   Uhat_norm <- scale_to_norm1(Uhat)
@@ -160,10 +207,13 @@ which_rank <- function(U, Uhat) {
        u_hat_norm = Uhat_norm[, r],
        diff = diffs[r])
 }
+
+#' @keywords internal
 normalize_columns <- function(matrix) {
   t(apply(matrix, 2, function(col) col / norm(matrix(col), type = "F")))
 }
 
+#' @keywords internal
 which_rank_modified <- function(U, Uhat) {
   U_norm <- scale_to_norm1(U)
   Uhat_norm <- scale_to_norm1(Uhat)
@@ -193,10 +243,12 @@ which_rank_modified <- function(U, Uhat) {
   return(results) # a list of length K
 }
 
+#' @keywords internal
 find_min_index <- function(matrix) {
   apply(matrix, 2, which.min)
 }
 
+#' @keywords internal
 extract_best_columns <- function(result_list, min_indices) {
   K <- length(min_indices)
   extracted_columns <- matrix(0, nrow = nrow(result_list[[1]]), ncol = K)
