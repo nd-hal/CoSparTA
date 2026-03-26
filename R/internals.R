@@ -71,8 +71,10 @@ calc_qz = function(n,p,w,K,ql,qf,qw){ # 28
   }
 
   qz = exp(qz)
+  qz_sum <- apply(qz, 1:3, sum)
+  dim(qz_sum) <- c(n, p, w)
   for(k in 1:K) {
-    qz[,,,k] <- qz[,,,k]/apply(qz, 1:3, sum)
+    qz[,,,k] <- qz[,,,k] / qz_sum
   }
 
   qz = pmax(qz,1e-16) # parallel maxima
