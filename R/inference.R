@@ -137,3 +137,129 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
     upper = mean_mat + z * sd_mat
   ))
 }
+
+#' Identify Significant Channels and Time Points per Factor via lFDR Control
+#'
+#' @description
+#' Implements Bayesian local-FDR control (Algorithms 1 and 2 from the EBTD
+#' framework) to identify which channels and time points are truly active for
+#' each factor. For each factor \code{l}, the posterior spike probabilities
+#' (local-fdr values) from the F and W modes are sorted and thresholded to
+#' produce a discovery set at a controlled FDR level.
+#'
+#' The local-fdr value for entry \eqn{(j, l)} is
+#' \eqn{\rho_{jl} = 1 - \text{PIP}_{jl}}, i.e., the posterior probability
+#' that the entry is truly zero. Algorithm 1 finds the largest discovery set
+#' such that the mean local-fdr does not exceed \code{alpha}.
+#'
+#' @param fit A fitted object returned by \code{\link{CxtEBTD}}.
+#' @param alpha Numeric FDR level in \code{(0, 1)}. Default \code{0.05}.
+#' @param mode Character string specifying which mode(s) to run discovery on:
+#'   \code{'F'} for time factors, \code{'W'} for channel weights, or
+#'   \code{'both'}. Default \code{'both'}.
+#'
+#' @return A list of length \code{K} (one element per factor). Each element
+#'   is a named list with:
+#' \describe{
+#'   \item{factor}{Integer factor index.}
+#'   \item{active_times}{Integer vector of active time point indices for this
+#'     factor (from F mode). \code{NULL} if mode is \code{'W'} or PIPs
+#'     unavailable.}
+#'   \item{active_channels}{Integer vector of active channel indices for this
+#'     factor (from W mode). \code{NULL} if mode is \code{'F'} or PIPs
+#'     unavailable.}
+#'   \item{n_active_times}{Number of active time points discovered.}
+#'   \item{n_active_channels}{Number of active channels discovered.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#'
+#' # Discover active channels and time points at 5% FDR
+#' patterns <- get_significant_patterns(fit, alpha = 0.05)
+#'
+#' # Factor 1 active time points
+#' patterns[[1]]$active_times
+#'
+#' # Factor 2 active channels
+#' patterns[[2]]$active_channels
+#' }
+#'
+#' @export
+get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
+
+  if (alpha <= 0 || alpha >= 1) stop("alpha must be between 0 and 1")
+  if (!mode %in% c('F', 'W', 'both')) stop("mode must be 'F', 'W', or 'both'")
+
+  K <- ncol(fit$res$ql$El)
+  results <- vector("list", K)
+
+  for (l in 1:K) {
+
+    active_times    <- NULL
+    active_channels <- NULL
+
+    # -- F mode: time points --
+    if (mode %in% c('F', 'both')) {
+      pip_f <- fit$res$qf$PIPf
+      if (!is.null(pip_f) && !all(is.na(pip_f[, l]))) {
+        active_times <- lfdr_discovery(1 - pip_f[, l], alpha)
+      } else {
+        warning(paste("PIPs not available for F mode, factor", l))
+      }
+    }
+
+    # -- W mode: channels --
+    if (mode %in% c('W', 'both')) {
+      pip_w <- fit$res$qw$PIPw
+      if (!is.null(pip_w) && !all(is.na(pip_w[, l]))) {
+        active_channels <- lfdr_discovery(1 - pip_w[, l], alpha)
+      } else {
+        warning(paste("PIPs not available for W mode, factor", l))
+      }
+    }
+
+    results[[l]] <- list(
+      factor           = l,
+      active_times     = active_times,
+      active_channels  = active_channels,
+      n_active_times   = length(active_times),
+      n_active_channels = length(active_channels)
+    )
+  }
+
+  return(results)
+}
+
+
+#' Algorithm 1: LFDR Discovery Set
+#'
+#' @description
+#' Given a vector of local-fdr values, finds the largest discovery set such
+#' that the mean local-fdr does not exceed alpha.
+#'
+#' @param lfdr_vals Numeric vector of local-fdr values in \code{[0, 1]}.
+#' @param alpha Numeric FDR level.
+#'
+#' @return Integer vector of indices in the discovery set (in original order).
+#'
+#' @keywords internal
+lfdr_discovery <- function(lfdr_vals, alpha) {
+
+  M <- length(lfdr_vals)
+  if (M == 0) return(integer(0))
+
+  # sort by local-fdr ascending (most likely signal first)
+  sorted_idx <- order(lfdr_vals)
+  sorted_lfdr <- lfdr_vals[sorted_idx]
+
+  # find k* = max k such that mean of top k <= alpha
+  cumulative_mean <- cumsum(sorted_lfdr) / seq_len(M)
+  k_star <- max(c(0, which(cumulative_mean <= alpha)))
+
+  if (k_star == 0) return(integer(0))
+
+  # return original indices of discovery set
+  sort(sorted_idx[1:k_star])
+}
