@@ -27,9 +27,12 @@
 #'   initialization step. Default \code{100}.
 #' @param tol Numeric. Convergence tolerance. Iterations stop when the change
 #'   in the objective is below this threshold. Default \code{1e-8}.
-#' @param ebpm.fn A single function or list of up to three functions specifying
-#'   the empirical Bayes Poisson mean prior for the L, F, and W modes
-#'   respectively. Default \code{c(ebpm::ebpm_point_gamma, smashrgen::ebps)}.
+#' @param ebpm.fn A single function or list of three functions specifying
+#'   the empirical Bayes prior for the L, F, and W modes respectively.
+#'   Default uses \code{ebpm_point_gamma_multiplier_covariates} for L
+#'   (covariate-aware), \code{ebps_with_uq} for F (smooth), and
+#'   \code{ebpm_point_gamma_with_uq} for W (point-gamma), all returning
+#'   posterior variance and PIP where applicable.
 #' @param fix_L Logical. If \code{TRUE}, the observation-mode loadings are held
 #'   fixed at initialization. Default \code{FALSE}.
 #' @param fix_F Logical. If \code{TRUE}, the time-mode factors are held fixed.
