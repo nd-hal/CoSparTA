@@ -113,6 +113,10 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     fit = ebpm.fn.f(f_seq,f_scale)
     res$qf$Ef[,k] = fit$posterior$mean
     res$qf$Elogf[,k] = fit$posterior$mean_log
+    if (!is.null(fit$posterior$var)) {
+      res$qf$Varf[,k] = fit$posterior$var
+      res$qf$PIPf[,k] = fit$posterior$pip
+    }
     res$Hf[k] = calc_H(f_seq,f_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gf[[k]] = fit$fitted_g
   }
@@ -123,6 +127,10 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     fit = ebpm.fn.w(w_seq,w_scale)
     res$qw$Ew[,k] = fit$posterior$mean
     res$qw$Elogw[,k] = fit$posterior$mean_log
+    if (!is.null(fit$posterior$var)) {
+      res$qw$Varw[,k] = fit$posterior$var
+      res$qw$PIPw[,k] = fit$posterior$pip
+    }
     res$Hw[k] = calc_H(w_seq,w_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     if(!is.null(fit$fitted_g)) res$gw[[k]] <- fit$fitted_g
   }
