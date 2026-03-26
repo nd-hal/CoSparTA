@@ -98,6 +98,8 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     #fit = ebpm.fn.l(l_seq,l_scale,Xcov)
     res$ql$El[,k] = fit$posterior$mean
     res$ql$Elogl[,k] = fit$posterior$mean_log
+    res$ql$Varl[,k] = fit$posterior$var
+    res$ql$PIPl[,k] = fit$posterior$pip
     res$Hl[k] = calc_H(l_seq,l_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gl[[k]] = fit$fitted_g
   }
