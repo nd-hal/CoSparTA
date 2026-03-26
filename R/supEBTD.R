@@ -104,7 +104,8 @@ CxtEBTD = function(X,K,Xcov=NULL,
                                     maxiter=100,
                                     maxiter_init = 100,
                                     tol=1e-8,
-                                    ebpm.fn=c(ebpm_point_gamma_multiplier_covariates,smashrgen::ebps,ebpm::ebpm_point_gamma), # need add another function
+                                    #ebpm.fn=c(ebpm_point_gamma_multiplier_covariates,smashrgen::ebps,ebpm::ebpm_point_gamma), 
+                                    ebpm.fn=c(ebpm_point_gamma_multiplier_covariates,ebps_with_uq,ebpm_point_gamma_with_uq), # for var and pip
                                     fix_L = FALSE, fix_F = FALSE, fix_W = FALSE,
                                     smooth_F = T,
                                     #smooth_control=list(),
