@@ -64,11 +64,16 @@
 #'   \item{elbo}{Final ELBO value computed after the last iteration.}
 #'   \item{obj_trace}{Numeric vector of objective values at each iteration.}
 #'   \item{res}{List of variational posterior summaries. Key fields:
-#'     \code{res$ql$El} — observation loadings (\code{n x K});
-#'     \code{res$qf$Ef} — time factors (\code{p x K});
-#'     \code{res$qw$Ew} — channel weights (\code{w x K});
-#'     \code{res$ql$Elogl}, \code{res$qf$Elogf}, \code{res$qw$Elogw} —
-#'     corresponding log-expectation matrices.}
+#'     \code{res$ql$El} — posterior mean loadings (\code{n x K});
+#'     \code{res$ql$Elogl} — posterior log-mean loadings (\code{n x K});
+#'     \code{res$ql$Varl} — posterior variance of loadings (\code{n x K});
+#'     \code{res$ql$PIPl} — posterior inclusion probabilities for loadings
+#'     (\code{n x K}), giving \eqn{P(\theta_i \neq 0 \mid x_i)} for each
+#'     observation and component;
+#'     \code{res$qf$Ef} — posterior mean time factors (\code{p x K});
+#'     \code{res$qf$Elogf} — posterior log-mean time factors (\code{p x K});
+#'     \code{res$qw$Ew} — posterior mean channel weights (\code{w x K});
+#'     \code{res$qw$Elogw} — posterior log-mean channel weights (\code{w x K}).}
 #'   \item{diff_U}{List of three vectors recording per-iteration reconstruction
 #'     error relative to \code{U1_true}, \code{U2_true}, \code{U3_true}.
 #'     Only meaningful when true factors are supplied.}
