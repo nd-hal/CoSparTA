@@ -173,7 +173,7 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #'   where \code{TRUE} indicates observed entries. If \code{NULL}, inferred
 #'   from \code{is.na(X)}. Default \code{NULL}.
 #' @param lib_size Numeric vector of length \code{n}. Default \code{NULL}.
-#' @param init Initialization method. Default \code{'fasttopics'}.
+#' @param init Initialization method. Default \code{'random_gamma'}.
 #' @param maxiter Maximum EM iterations. Default \code{100}.
 #' @param maxiter_init Maximum initialization iterations. Default \code{100}.
 #' @param tol Convergence tolerance. Default \code{1e-8}.
@@ -224,7 +224,7 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 CxtEBTD_missing <- function(X, K, Xcov = NULL,
                              obs_mask = NULL,
                              lib_size = NULL,
-                             init = 'fasttopics',
+                             init = 'random_gamma',
                              maxiter = 100,
                              maxiter_init = 100,
                              tol = 1e-8,

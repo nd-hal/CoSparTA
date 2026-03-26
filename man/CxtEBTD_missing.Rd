@@ -10,7 +10,7 @@ CxtEBTD_missing(
   Xcov = NULL,
   obs_mask = NULL,
   lib_size = NULL,
-  init = "fasttopics",
+  init = "random_gamma",
   maxiter = 100,
   maxiter_init = 100,
   tol = 1e-08,
@@ -44,7 +44,7 @@ from \code{is.na(X)}. Default \code{NULL}.}
 
 \item{lib_size}{Numeric vector of length \code{n}. Default \code{NULL}.}
 
-\item{init}{Initialization method. Default \code{'fasttopics'}.}
+\item{init}{Initialization method. Default \code{'random_gamma'}.}
 
 \item{maxiter}{Maximum EM iterations. Default \code{100}.}
 

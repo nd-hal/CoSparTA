@@ -21,7 +21,7 @@
 #'   library sizes (exposure/scaling factors). Default \code{NULL}, which sets
 #'   all sizes to 1.
 #' @param init Character string specifying the initialization method.
-#'   Default \code{'fasttopics'}.
+#'   Default \code{'random_gamma'}.
 #' @param maxiter Integer. Maximum number of EM iterations. Default \code{100}.
 #' @param maxiter_init Integer. Maximum number of iterations for the
 #'   initialization step. Default \code{100}.
@@ -103,7 +103,7 @@
 
 CxtEBTD = function(X,K,Xcov=NULL,
                                     lib_size = NULL,
-                                    init = 'fasttopics',
+                                    init = 'random_gamma',
                                     maxiter=100,
                                     maxiter_init = 100,
                                     tol=1e-8,

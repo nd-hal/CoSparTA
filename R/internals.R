@@ -22,12 +22,10 @@ ebpmf_identity_init = function(X,
 
   }else{
 
-    if(init == 'uniform'){
-      L_init = matrix(runif(n*K),nrow=n,ncol=K)
-      F_init = matrix(runif(K*p),nrow=p,ncol=K)
-      ratio = median(X)/(median(L_init)*median(F_init))
-      L_init = L_init*sqrt(ratio)
-      F_init = F_init*sqrt(ratio)
+    if(init == 'random_gamma'){
+      L_init = matrix(rgamma(n*K, shape=100, rate=100), nrow=n, ncol=K)
+      F_init = matrix(rgamma(p*K, shape=100, rate=100), nrow=p, ncol=K)
+      W_init = matrix(rgamma(w*K, shape=100, rate=100), nrow=w, ncol=K)
     }
   }
   # adjust scale of L and F, mainly for stability.
