@@ -43,10 +43,17 @@ A named list with:
   \item{posterior}{Data frame with one row per observation and columns:
     \code{mean} — posterior mean \eqn{E[\theta_i \mid x_i]};
     \code{mean_log} — posterior log-mean \eqn{E[\log\theta_i \mid x_i]}
-    (\code{-Inf} for observations with \eqn{x_i = 0}).}
+    (\code{-Inf} for observations with \eqn{x_i = 0});
+    \code{var} — posterior variance
+    \eqn{\text{Var}(\theta_i \mid x_i)}, decomposed as within-component
+    variance (uncertainty in the gamma component) plus between-component
+    variance (uncertainty about whether the spike fired);
+    \code{pip} — posterior inclusion probability
+    \eqn{P(\theta_i \neq 0 \mid x_i) = 1 - \hat{\pi}_i}, giving the
+    probability that observation \eqn{i} has a truly non-zero loading.}
   \item{log_likelihood}{Maximized marginal log-likelihood.}
   \item{convergence_code}{Optimizer convergence code. For \code{nlm}:
-    1–2 indicate convergence; 3–5 indicate potential issues (see
+    1--2 indicate convergence; 3--5 indicate potential issues (see
     \code{?nlm}). For \code{optim} fallback: 0 = converged.}
 }
 }
