@@ -13,8 +13,8 @@ CxtEBTD(
   maxiter = 100,
   maxiter_init = 100,
   tol = 1e-08,
-  ebpm.fn = c(ebpm_point_gamma_multiplier_covariates, smashrgen::ebps,
-    ebpm::ebpm_point_gamma),
+  ebpm.fn = c(ebpm_point_gamma_multiplier_covariates, ebps_with_uq,
+    ebpm_point_gamma_with_uq),
   fix_L = FALSE,
   fix_F = FALSE,
   fix_W = FALSE,
@@ -54,9 +54,12 @@ initialization step. Default \code{100}.}
 \item{tol}{Numeric. Convergence tolerance. Iterations stop when the change
 in the objective is below this threshold. Default \code{1e-8}.}
 
-\item{ebpm.fn}{A single function or list of up to three functions specifying
-the empirical Bayes Poisson mean prior for the L, F, and W modes
-respectively. Default \code{c(ebpm::ebpm_point_gamma, smashrgen::ebps)}.}
+\item{ebpm.fn}{A single function or list of three functions specifying
+the empirical Bayes prior for the L, F, and W modes respectively.
+Default uses \code{ebpm_point_gamma_multiplier_covariates} for L
+(covariate-aware), \code{ebps_with_uq} for F (smooth), and
+\code{ebpm_point_gamma_with_uq} for W (point-gamma), all returning
+posterior variance and PIP where applicable.}
 
 \item{fix_L}{Logical. If \code{TRUE}, the observation-mode loadings are held
 fixed at initialization. Default \code{FALSE}.}

@@ -46,7 +46,7 @@ get_pip <- function(fit, mode = 'L', threshold = NULL) {
 
   if (is.null(pip_mat) || all(is.na(pip_mat))) {
     warning(paste("PIPs not available for mode", mode,
-                  "— the prior used for this mode has no spike component."))
+                  "-- the prior used for this mode has no spike component."))
     return(NULL)
   }
 
@@ -124,7 +124,7 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
 
   if (is.null(var_mat) || all(is.na(var_mat))) {
     warning(paste("Posterior variance not available for mode", mode,
-                  "— credible intervals cannot be computed."))
+                  "-- credible intervals cannot be computed."))
     return(NULL)
   }
 
