@@ -46,10 +46,17 @@
 #'   \item{posterior}{Data frame with one row per observation and columns:
 #'     \code{mean} — posterior mean \eqn{E[\theta_i \mid x_i]};
 #'     \code{mean_log} — posterior log-mean \eqn{E[\log\theta_i \mid x_i]}
-#'     (\code{-Inf} for observations with \eqn{x_i = 0}).}
+#'     (\code{-Inf} for observations with \eqn{x_i = 0});
+#'     \code{var} — posterior variance
+#'     \eqn{\text{Var}(\theta_i \mid x_i)}, decomposed as within-component
+#'     variance (uncertainty in the gamma component) plus between-component
+#'     variance (uncertainty about whether the spike fired);
+#'     \code{pip} — posterior inclusion probability
+#'     \eqn{P(\theta_i \neq 0 \mid x_i) = 1 - \hat{\pi}_i}, giving the
+#'     probability that observation \eqn{i} has a truly non-zero loading.}
 #'   \item{log_likelihood}{Maximized marginal log-likelihood.}
 #'   \item{convergence_code}{Optimizer convergence code. For \code{nlm}:
-#'     1–2 indicate convergence; 3–5 indicate potential issues (see
+#'     1--2 indicate convergence; 3--5 indicate potential issues (see
 #'     \code{?nlm}). For \code{optim} fallback: 0 = converged.}
 #' }
 #'
@@ -163,7 +170,17 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
       (digamma(alpha_est + x[nonzero_idx]) - log(beta_eff_i[nonzero_idx] + s[nonzero_idx]))
   }
 
-  posterior <- data.frame(mean = mu_pm, mean_log = mu_log_pm)
+  #posterior <- data.frame(mean = mu_pm, mean_log = mu_log_pm)
+  var_within <- (1 - pi_hat) * (alpha_est + x) / (beta_eff_i + s)^2
+  var_between <- pi_hat * (1 - pi_hat) * ((alpha_est + x) / (beta_eff_i + s))^2
+  mu_var <- var_within + var_between
+  
+  posterior <- data.frame(
+    mean    = mu_pm,
+    mean_log = mu_log_pm,
+    var     = mu_var,
+    pip     = 1 - pi_hat
+  )
 
   fitted_g = list(
   pi0 = pi0_est,
