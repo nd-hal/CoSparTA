@@ -62,3 +62,52 @@ ebpm_point_gamma_with_uq <- function(x, s = 1, ...) {
 
   return(fit)
 }
+
+#' Empirical Bayes Poisson Smoothing with Posterior Variance
+#'
+#' @description
+#' A wrapper around \code{\link[smashrgen]{ebps}} that augments the posterior
+#' output with posterior variance when available. Posterior variance is
+#' computed from the log-normal formula using the variational posterior
+#' parameters returned by \code{ebps}. Note that \code{ebps} uses a
+#' Gaussian smoothing prior with no spike component, so posterior inclusion
+#' probabilities (PIPs) are not applicable and returned as \code{NA}.
+#'
+#' @param x Non-negative integer vector of observed counts.
+#' @param s Numeric scalar or vector of scaling factors. Default \code{NULL}.
+#' @param ... Additional arguments passed to \code{\link[smashrgen]{ebps}}
+#'   (e.g. \code{g_init}, \code{general_control}, \code{smooth_control}).
+#'
+#' @return Same structure as \code{\link[smashrgen]{ebps}} but with two
+#'   additional columns in \code{posterior}:
+#' \describe{
+#'   \item{var}{Posterior variance \eqn{\text{Var}(\lambda_i \mid x_i)}
+#'     computed via the log-normal formula
+#'     \eqn{\exp(2m_i + v_i)(\exp(v_i) - 1)} when \code{var_log} is
+#'     available (i.e. \code{wave_trans = 'dwt'}). \code{NA} otherwise.}
+#'   \item{pip}{Not applicable for \code{ebps} (no spike-slab component).
+#'     Always \code{NA}.}
+#' }
+#'
+#' @seealso \code{\link[smashrgen]{ebps}},
+#'   \code{\link{ebpm_point_gamma_with_uq}}
+#'
+#' @export
+ebps_with_uq <- function(x, s = NULL, ...) {
+
+  fit <- smashrgen::ebps(x, s, ...)
+
+  # var_log only available for wave_trans='dwt'
+  if (!is.null(fit$posterior$var_log)) {
+    m_i <- fit$posterior$mean_log
+    v_i <- fit$posterior$var_log
+    fit$posterior$var <- exp(2 * m_i + v_i) * (exp(v_i) - 1)
+  } else {
+    fit$posterior$var <- NA
+  }
+
+  # PIP not applicable for smoothing prior
+  fit$posterior$pip <- NA
+
+  return(fit)
+}
