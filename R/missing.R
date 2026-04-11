@@ -508,6 +508,8 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
     res$ql$El[, k]    <- fit$posterior$mean
     res$ql$Elogl[, k] <- fit$posterior$mean_log
     if (!is.null(fit$posterior$var)) {
+      if (is.null(res$ql$Varl)) res$ql$Varl <- matrix(NA_real_, nrow(res$ql$El), ncol(res$ql$El))
+      if (is.null(res$ql$PIPl)) res$ql$PIPl <- matrix(NA_real_, nrow(res$ql$El), ncol(res$ql$El))
       res$ql$Varl[, k] <- fit$posterior$var
       res$ql$PIPl[, k] <- fit$posterior$pip
     }
@@ -524,6 +526,8 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
     res$qf$Ef[, k]    <- fit$posterior$mean
     res$qf$Elogf[, k] <- fit$posterior$mean_log
     if (!is.null(fit$posterior$var)) {
+      if (is.null(res$qf$Varf)) res$qf$Varf <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
+      if (is.null(res$qf$PIPf)) res$qf$PIPf <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
       res$qf$Varf[, k] <- fit$posterior$var
       res$qf$PIPf[, k] <- fit$posterior$pip
     }
@@ -540,6 +544,8 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
     res$qw$Ew[, k]    <- fit$posterior$mean
     res$qw$Elogw[, k] <- fit$posterior$mean_log
     if (!is.null(fit$posterior$var)) {
+      if (is.null(res$qw$Varw)) res$qw$Varw <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
+      if (is.null(res$qw$PIPw)) res$qw$PIPw <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
       res$qw$Varw[, k] <- fit$posterior$var
       res$qw$PIPw[, k] <- fit$posterior$pip
     }
@@ -555,12 +561,12 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
 .calc_EZ_3d_missing <- function(x, prob, n, p, w) {
   x$prob_x <- x$v * prob
 
-  out_x1 <- x %>% group_by(V1) %>%
-    summarize(new = sum(prob_x), .groups = 'drop') %>% arrange(V1)
-  out_x2 <- x %>% group_by(V2) %>%
-    summarize(new = sum(prob_x), .groups = 'drop') %>% arrange(V2)
-  out_x3 <- x %>% group_by(V3) %>%
-    summarize(new = sum(prob_x), .groups = 'drop') %>% arrange(V3)
+  out_x1 <- x %>% dplyr::group_by(V1) %>%
+    dplyr::summarize(new = sum(prob_x), .groups = 'drop') %>% dplyr::arrange(V1)
+  out_x2 <- x %>% dplyr::group_by(V2) %>%
+    dplyr::summarize(new = sum(prob_x), .groups = 'drop') %>% dplyr::arrange(V2)
+  out_x3 <- x %>% dplyr::group_by(V3) %>%
+    dplyr::summarize(new = sum(prob_x), .groups = 'drop') %>% dplyr::arrange(V3)
 
   rs <- numeric(n)
   cs <- numeric(p)

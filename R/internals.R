@@ -99,6 +99,8 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     res$ql$El[,k] = fit$posterior$mean
     res$ql$Elogl[,k] = fit$posterior$mean_log
     if (!is.null(fit$posterior$var)) {
+      if (is.null(res$ql$Varl)) res$ql$Varl <- matrix(NA_real_, nrow(res$ql$El), ncol(res$ql$El))
+      if (is.null(res$ql$PIPl)) res$ql$PIPl <- matrix(NA_real_, nrow(res$ql$El), ncol(res$ql$El))
       res$ql$Varl[,k] = fit$posterior$var
       res$ql$PIPl[,k] = fit$posterior$pip
     }
@@ -114,6 +116,8 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     res$qf$Ef[,k] = fit$posterior$mean
     res$qf$Elogf[,k] = fit$posterior$mean_log
     if (!is.null(fit$posterior$var)) {
+      if (is.null(res$qf$Varf)) res$qf$Varf <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
+      if (is.null(res$qf$PIPf)) res$qf$PIPf <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
       res$qf$Varf[,k] = fit$posterior$var
       res$qf$PIPf[,k] = fit$posterior$pip
     }
@@ -128,6 +132,8 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     res$qw$Ew[,k] = fit$posterior$mean
     res$qw$Elogw[,k] = fit$posterior$mean_log
     if (!is.null(fit$posterior$var)) {
+      if (is.null(res$qw$Varw)) res$qw$Varw <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
+      if (is.null(res$qw$PIPw)) res$qw$PIPw <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
       res$qw$Varw[,k] = fit$posterior$var
       res$qw$PIPw[,k] = fit$posterior$pip
     }

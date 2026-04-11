@@ -1,3 +1,7 @@
+#' @import data.table
+#' @importFrom dplyr %>%
+"_PACKAGE"
+
 #' Rescale loadings and factors to similar column norms
 #'
 #' @description
@@ -140,7 +144,7 @@ rbind_sparse_matrix <- function(X, reindex = F) {
     unique_i <- unique(ret$V1)
     unique_i <- unique_i[order(unique_i)]
     indx_tbl <- data.frame(new = 1:length(unique_i), V1 = unique_i)
-    ret <- left_join(ret, indx_tbl, by = "V1")
+    ret <- data.table::as.data.table(dplyr::left_join(ret, indx_tbl, by = "V1"))
     ret <- ret[, .(V1 = new, V2, V3, v)]
     # if(i > 1) ret[, V1 := V1 + max(convs$V1)]
   } else {
@@ -165,9 +169,9 @@ calc_EZ_3d <- function(x,prob,n,p,w){ #29
 
   x$prob_x = x$v*prob
 
-  out_x1= x %>% group_by(V1) %>% summarize(new = sum(prob_x))
-  out_x2= x %>% group_by(V2) %>% summarize(new = sum(prob_x))
-  out_x3= x %>% group_by(V3) %>% summarize(new = sum(prob_x))
+  out_x1= x %>% dplyr::group_by(V1) %>% dplyr::summarize(new = sum(prob_x))
+  out_x2= x %>% dplyr::group_by(V2) %>% dplyr::summarize(new = sum(prob_x))
+  out_x3= x %>% dplyr::group_by(V3) %>% dplyr::summarize(new = sum(prob_x))
 
   return(list(rs=out_x1$new,
               cs=out_x2$new,

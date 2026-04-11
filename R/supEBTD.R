@@ -169,6 +169,11 @@ CxtEBTD = function(X,K,Xcov=NULL,
     #print(ebpm.fn.w)
   }
 
+  # When no covariates, fall back to plain point-gamma for L
+  if (is.null(Xcov)) {
+    ebpm.fn.l = ebpm::ebpm_point_gamma
+  }
+
   if(verbose){
     cat('initializing loadings and factors...')
     cat('\n')
@@ -180,7 +185,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
   exp_offset = matrixStats::rowMaxs(alpha)
   alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
   alpha = exp(alpha)
-  alpha = alpha/rowsums(alpha)
+  alpha = alpha/Rfast::rowsums(alpha)
 
 
   obj = c()
@@ -214,7 +219,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
     exp_offset = matrixStats::rowMaxs(alpha)
     alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
     alpha = exp(alpha)
-    alpha = alpha/rowsums(alpha)
+    alpha = alpha/Rfast::rowsums(alpha)
 
     if(convergence_criteria == 'mKLabs'){
       obj[iter+1] = mKL(x$x,(tcrossprod(res$ql$El,res$qf$Ef)*res$lib_size)[non0_idx])
@@ -267,6 +272,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
     ret_EW_list[[iter]] = ret_EW
     # normalize true values
     # then calculate difference, store min diff
+    if (!is.null(U1_true) && !is.null(U2_true) && !is.null(U3_true)) {
     U1 <- U1_true[,1]/norm(matrix(U1_true[,1]), type = "F")
     U1_hat_norm <- which_rank(U1, ret_EL)
     #
@@ -296,6 +302,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
       print(sprintf('At iter %d, U2: %f',iter,U2_hat_norm$diff))
       print(sprintf('At iter %d, U3: %f',iter,U3_hat_norm$diff))
     }
+    } # end if (!is.null(U1_true))
 
     if(adj_LF_scale){ # we don't use it now; but likely will use it when K>1; this is like the lambda
       gammaL = colSums(res$ql$El)
@@ -345,6 +352,20 @@ CxtEBTD = function(X,K,Xcov=NULL,
   res$ql$El <- ret_EL
   res$qf$Ef <- ret_EF
   res$qw$Ew <- ret_EW
+
+  # Expand variance/PIP matrices back to original dimensions
+  if (!is.null(res$ql$Varl)) {
+    tmp <- matrix(NA_real_, n_original, K); tmp[!users_zero,] <- res$ql$Varl; res$ql$Varl <- tmp
+    tmp <- matrix(NA_real_, n_original, K); tmp[!users_zero,] <- res$ql$PIPl; res$ql$PIPl <- tmp
+  }
+  if (!is.null(res$qf$Varf)) {
+    tmp <- matrix(NA_real_, p_original, K); tmp[!times_zero,] <- res$qf$Varf; res$qf$Varf <- tmp
+    tmp <- matrix(NA_real_, p_original, K); tmp[!times_zero,] <- res$qf$PIPf; res$qf$PIPf <- tmp
+  }
+  if (!is.null(res$qw$Varw)) {
+    tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$Varw; res$qw$Varw <- tmp
+    tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$PIPw; res$qw$PIPw <- tmp
+  }
   #res$ql$El <- best_EL
   # res$qf$Ef <- best_EF
   # res$qw$Ew <- best_EW
