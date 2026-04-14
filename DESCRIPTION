@@ -17,7 +17,8 @@ Imports:
   smashrgen,
   Rfast,
   slam,
-  dplyr
+  dplyr,
+  methods
 Remotes:
   DongyueXie/ebpm,
   DongyueXie/smashrgen

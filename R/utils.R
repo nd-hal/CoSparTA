@@ -1,7 +1,3 @@
-#' @import data.table
-#' @importFrom dplyr %>%
-"_PACKAGE"
-
 #' Rescale loadings and factors to similar column norms
 #'
 #' @description
