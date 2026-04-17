@@ -167,8 +167,12 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' @param X A 3-dimensional non-negative integer array of dimensions
 #'   \code{n x p x w}. May contain \code{NA} for missing entries.
 #' @param K Integer. Number of components (CP rank).
-#' @param Xcov Numeric covariate matrix of dimension \code{n x q}. Pass
-#'   \code{NULL} for unsupervised decomposition. Default \code{NULL}.
+#' @param Xcov Covariate input for the observation mode. Can be: (1) \code{NULL}
+#'   for fully unsupervised decomposition; (2) a numeric matrix of dimension
+#'   \code{n x q}, applied identically to all K components; or (3) a list of
+#'   length \code{K}, where each element is either a numeric covariate matrix
+#'   (dimensions \code{n x q_k}, potentially different numbers of covariates per
+#'   component) or \code{NULL} for unsupervised components. Default \code{NULL}.
 #' @param obs_mask Optional logical array of same dimensions as \code{X},
 #'   where \code{TRUE} indicates observed entries. If \code{NULL}, inferred
 #'   from \code{is.na(X)}. Default \code{NULL}.
@@ -272,7 +276,15 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
   n_points <- n * p * w
 
   if (!is.null(Xcov)) {
-    Xcov <- Xcov[!users_zero, , drop = FALSE]
+    if (is.matrix(Xcov)) {
+      Xcov <- rep(list(Xcov), K)
+    }
+    if (!is.list(Xcov) || length(Xcov) != K) {
+      stop("Xcov must be NULL, a matrix, or a list of length K")
+    }
+    Xcov <- lapply(Xcov, function(xc) {
+      if (!is.null(xc)) xc[!users_zero, , drop = FALSE] else NULL
+    })
   }
 
   if (is.null(lib_size)) {
@@ -308,9 +320,13 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
     ebpm.fn.w <- ebpm.fn[[3]]
   }
 
-  # When no covariates, fall back to plain point-gamma for L
-  if (is.null(Xcov)) {
-    ebpm.fn.l <- ebpm::ebpm_point_gamma
+  # Normalize ebpm.fn.l to a length-K list
+  if (is.function(ebpm.fn.l)) {
+    ebpm_fn_l_list <- rep(list(ebpm.fn.l), K)
+  } else if (is.list(ebpm.fn.l) && length(ebpm.fn.l) == K) {
+    ebpm_fn_l_list <- ebpm.fn.l
+  } else {
+    stop("ebpm.fn L-mode entry must be a single function or a list of K functions")
   }
 
   if (verbose) cat('Initializing loadings and factors...\n')
@@ -334,11 +350,16 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
   for (iter in 1:maxiter) {
 
     for (k in 1:K) {
-      Ez  <- .calc_EZ_3d_missing(x, alpha[, k], n, p, w)
+      Ez <- .calc_EZ_3d_missing(x, alpha[, k], n, p, w)
+      xcov_k <- if (!is.null(Xcov)) Xcov[[k]] else NULL
+      fn_l_k <- ebpm_fn_l_list[[k]]
+      if (is.null(xcov_k) && identical(fn_l_k, ebpm_point_gamma_multiplier_covariates)) {
+        fn_l_k <- ebpm::ebpm_point_gamma
+      }
       res <- .stm_update_rank1_missing(
         Ez$rs, Ez$cs, Ez$zs, k,
-        ebpm.fn.l, ebpm.fn.f, ebpm.fn.w,
-        res, fix_L, fix_F, fix_W, Xcov,
+        fn_l_k, ebpm.fn.f, ebpm.fn.w,
+        res, fix_L, fix_F, fix_W, xcov_k,
         obs_structure, n, p, w
       )
     }
