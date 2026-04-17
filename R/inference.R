@@ -305,12 +305,14 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
   pi_hat_mat <- 1 - pip_mat
 
   out <- lapply(probs, function(tau) {
-    q_mat <- ifelse(
-      tau <= pi_hat_mat,
-      0,
-      qgamma((tau - pi_hat_mat) / (1 - pi_hat_mat),
-             shape = shape_mat, rate = rate_mat)
-    )
+    q_mat <- matrix(0, nrow = nrow(pip_mat), ncol = ncol(pip_mat))
+    slab_idx <- tau > pi_hat_mat & pi_hat_mat < 1
+    if (any(slab_idx)) {
+      adjusted_prob <- (tau - pi_hat_mat[slab_idx]) / (1 - pi_hat_mat[slab_idx])
+      q_mat[slab_idx] <- qgamma(adjusted_prob,
+                                 shape = shape_mat[slab_idx],
+                                 rate = rate_mat[slab_idx])
+    }
     q_mat
   })
 
