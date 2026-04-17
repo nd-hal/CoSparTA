@@ -35,8 +35,12 @@ CxtEBTD_missing(
 
 \item{K}{Integer. Number of components (CP rank).}
 
-\item{Xcov}{Numeric covariate matrix of dimension \code{n x q}. Pass
-\code{NULL} for unsupervised decomposition. Default \code{NULL}.}
+\item{Xcov}{Covariate input for the observation mode. Can be: (1) \code{NULL}
+for fully unsupervised decomposition; (2) a numeric matrix of dimension
+\code{n x q}, applied identically to all K components; or (3) a list of
+length \code{K}, where each element is either a numeric covariate matrix
+(dimensions \code{n x q_k}, potentially different numbers of covariates per
+component) or \code{NULL} for unsupervised components. Default \code{NULL}.}
 
 \item{obs_mask}{Optional logical array of same dimensions as \code{X},
 where \code{TRUE} indicates observed entries. If \code{NULL}, inferred

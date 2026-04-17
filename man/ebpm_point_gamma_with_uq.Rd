@@ -18,13 +18,15 @@ per-observation exposure/scaling factors. Default \code{1}.}
 }
 \value{
 Same structure as \code{\link[ebpm]{ebpm_point_gamma}} but with
-  two additional columns in \code{posterior}:
+  four additional columns in \code{posterior}:
 \describe{
   \item{var}{Posterior variance \eqn{\text{Var}(\theta_i \mid x_i)},
     decomposed as within-component variance plus between-component
     variance from spike uncertainty.}
   \item{pip}{Posterior inclusion probability
     \eqn{P(\theta_i \neq 0 \mid x_i) = 1 - \hat{\pi}_i}.}
+  \item{shape_post}{Posterior gamma shape parameter \eqn{a + x_i}.}
+  \item{rate_post}{Posterior gamma rate parameter \eqn{b + s_i}.}
 }
 }
 \description{

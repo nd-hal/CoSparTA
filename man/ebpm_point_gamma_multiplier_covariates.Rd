@@ -50,7 +50,11 @@ A named list with:
     variance (uncertainty about whether the spike fired);
     \code{pip} — posterior inclusion probability
     \eqn{P(\theta_i \neq 0 \mid x_i) = 1 - \hat{\pi}_i}, giving the
-    probability that observation \eqn{i} has a truly non-zero loading.}
+    probability that observation \eqn{i} has a truly non-zero loading;
+    \code{shape_post} — posterior gamma shape parameter
+    \eqn{\alpha + x_i}, the shape of the gamma kernel in the non-spike
+    component; \code{rate_post} — posterior gamma rate parameter
+    \eqn{\beta / \lambda_i + s_i}, the rate of the gamma kernel.}
   \item{log_likelihood}{Maximized marginal log-likelihood.}
   \item{convergence_code}{Optimizer convergence code. For \code{nlm}:
     1--2 indicate convergence; 3--5 indicate potential issues (see
