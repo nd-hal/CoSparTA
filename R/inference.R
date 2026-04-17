@@ -233,6 +233,92 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 }
 
 
+#' Compute Exact Posterior Quantiles from a CxtEBTD fit
+#'
+#' @description
+#' Computes exact quantiles of the marginal posterior distribution for each
+#' factor element, using the closed-form spike-and-slab structure of the
+#' point-gamma posterior. The marginal CDF is:
+#' \deqn{F(\theta) = \hat\pi_i \cdot \mathbf{1}[\theta \geq 0] +
+#'   (1 - \hat\pi_i) \cdot F_{\text{Gamma}}(\theta)}
+#' so the quantile at probability \eqn{\tau} is 0 when
+#' \eqn{\tau \leq \hat\pi_i}, and otherwise
+#' \eqn{F_{\text{Gamma}}^{-1}\!\left((\tau - \hat\pi_i)\,/\,(1 - \hat\pi_i)\right)}
+#' where the gamma is parameterized by the posterior shape and rate.
+#'
+#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
+#'   \code{\link{CxtEBTD_missing}}.
+#' @param probs Numeric vector of probabilities in \code{[0, 1]} at which to
+#'   evaluate the quantile function. Default \code{c(0.025, 0.975)}.
+#' @param mode Character string specifying which mode to extract:
+#'   \code{'L'} for observation loadings, \code{'F'} for time factors,
+#'   \code{'W'} for channel weights. Default \code{'L'}.
+#'
+#' @return A named list with one matrix per entry of \code{probs}. Each
+#'   matrix has the same dimensions as the corresponding factor matrix
+#'   (\code{n x K} for L, \code{p x K} for F, \code{w x K} for W). Names
+#'   are formatted as \code{paste0("q", round(probs * 100, 1))}, e.g.
+#'   \code{"q2.5"} and \code{"q97.5"} for the default \code{probs}.
+#'
+#' @seealso \code{\link{get_credible_interval}}, \code{\link{get_pip}}
+#'
+#' @examples
+#' \dontrun{
+#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#'
+#' # 95% equal-tailed posterior intervals for observation loadings
+#' q_L <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = 'L')
+#' q_L$q2.5    # lower bound matrix (n x K)
+#' q_L$q97.5   # upper bound matrix (n x K)
+#'
+#' # Posterior median for channel weights
+#' q_W <- get_posterior_quantile(fit, probs = 0.5, mode = 'W')
+#' q_W$q50
+#' }
+#'
+#' @export
+get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
+
+  pip_mat <- switch(mode,
+    'L' = fit$res$ql$PIPl,
+    'F' = fit$res$qf$PIPf,
+    'W' = fit$res$qw$PIPw,
+    stop("mode must be one of 'L', 'F', or 'W'")
+  )
+
+  shape_mat <- switch(mode,
+    'L' = fit$res$ql$shape_post_l,
+    'F' = fit$res$qf$shape_post_f,
+    'W' = fit$res$qw$shape_post_w
+  )
+
+  rate_mat <- switch(mode,
+    'L' = fit$res$ql$rate_post_l,
+    'F' = fit$res$qf$rate_post_f,
+    'W' = fit$res$qw$rate_post_w
+  )
+
+  if (is.null(shape_mat) || is.null(rate_mat)) {
+    stop("Posterior Gamma parameters not available. Refit the model with the current package version.")
+  }
+
+  pi_hat_mat <- 1 - pip_mat
+
+  out <- lapply(probs, function(tau) {
+    q_mat <- ifelse(
+      tau <= pi_hat_mat,
+      0,
+      qgamma((tau - pi_hat_mat) / (1 - pi_hat_mat),
+             shape = shape_mat, rate = rate_mat)
+    )
+    q_mat
+  })
+
+  names(out) <- paste0("q", round(probs * 100, 1))
+  out
+}
+
+
 #' Algorithm 1: LFDR Discovery Set
 #'
 #' @description
