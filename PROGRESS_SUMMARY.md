@@ -10,7 +10,8 @@ CxtEBTD (Covariate-aware Empirical Bayes Tensor Decomposition) is an R package i
 - Current status: 0 errors, 0 warnings on devtools::check()
 
 ## File structure
-CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (all 3 tests passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), │ get_significant_patterns() └── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction()
+CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor() └── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction()
+
 ## Exported functions
 | Function | Purpose |
 |----------|---------|
@@ -22,6 +23,10 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 | `get_pip()` | Extract posterior inclusion probabilities |
 | `get_credible_interval()` | Compute credible intervals from posterior var |
 | `get_significant_patterns()` | lFDR-based pattern discovery (Algorithms 1+2) |
+| `get_posterior_quantile()` | Exact quantiles from spike-and-slab posterior |
+| `normalize_factors()` | Normalize columns to unit norm, compute component weights λ |
+| `project_tensor()` | Project new tensor data onto learned factors (Eq. 6) |
+| `reconstruct_tensor()` | Reconstruct denoised mean tensor from fitted factors |
 | `generate_missing_mask()` | Simulate missing data for evaluation |
 | `evaluate_missing_prediction()` | Evaluate imputation quality |
 | `adjLF()` | Scale loadings/factors to similar norms |
@@ -37,7 +42,8 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 4. Default `init = 'random_gamma'` — Gamma(shape=100, rate=100), BPTF-style
 5. Always run with `adj_LF_scale = FALSE` (default TRUE has a latent bug with Ef_smooth, partially guarded)
 6. Always run with `convergence_criteria = 'ELBO'` to match dissertation pipeline
-7. Rank-specific covariates: Xcov and ebpm.fn.l are normalized to length-K lists early in CxtEBTD()/CxtEBTD_missing(). Per-rank dispatch in the iteration loop with auto-fallback for unsupervised ranks.
+7. Rank-specific covariates: Xcov and ebpm.fn.l normalized to length-K lists early in CxtEBTD()/CxtEBTD_missing(). Per-rank dispatch with auto-fallback for unsupervised ranks.
+8. Posterior Gamma shape/rate parameters threaded through all modes via lazy-init pattern. Enables exact quantile computation for spike-and-slab posteriors.
 
 ## Bugs fixed (as of April 2026)
 1. **init='random_gamma' implemented** — replaces dead uniform/fasttopics branches. Gamma(100,100) init for L, F, W.
@@ -56,6 +62,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 - Test A (unsupervised): Tensor MSE=0.000606, U1/U2/U3 RMSE ~0.10
 - Test B (supervised): Tensor MSE=0.000616, γ₁ slope ≈ 0.93 (true 0.8), Varl/PIPl populated
 - Test C (missing data): RMSE=1.18, MAE=1.03 on held-out nonzeros
+- Tests D–H covering rank-specific covariates, posterior quantiles, normalize_factors, project_tensor, reconstruct_tensor
 
 ## Known remaining issues
 - adj_LF_scale=TRUE still has a latent issue: gammaF computed twice (W never scaled). Low priority since we always use FALSE.
@@ -63,7 +70,6 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 ## Not yet implemented (planned for IJOC paper)
 - Bootstrap/delta method CIs for gamma coefficients
 - Rank selection utility (elbow on weights, prune_rank())
-- project_tensor() and reconstruct_tensor() for downstream tasks
 - Factor stability index via bootstrap
 - Contrastive trait analysis (Algorithm 3, group comparison)
 - Visualization functions (trait summary plot: channel bars + time line + PIP-overlaid user loadings)
