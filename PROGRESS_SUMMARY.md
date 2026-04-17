@@ -59,8 +59,6 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 
 ## Known remaining issues
 - adj_LF_scale=TRUE still has a latent issue: gammaF computed twice (W never scaled). Low priority since we always use FALSE.
-- eval_this_new() in dissertation scripts has U2 bug (U2_norm <- U1/norm(matrix(U2))) — fix script written but not yet run on CRC.
-- U2 RMSE in saved dissertation RawMetrics files is wrong due to above bug. Fix: reload otuput_reordered, rerun calc_metrics_23_fixed, overwrite RawMetrics.
 
 ## Not yet implemented (planned for IJOC paper)
 - Bootstrap/delta method CIs for gamma coefficients
