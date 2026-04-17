@@ -37,6 +37,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 4. Default `init = 'random_gamma'` — Gamma(shape=100, rate=100), BPTF-style
 5. Always run with `adj_LF_scale = FALSE` (default TRUE has a latent bug with Ef_smooth, partially guarded)
 6. Always run with `convergence_criteria = 'ELBO'` to match dissertation pipeline
+7. Rank-specific covariates: Xcov and ebpm.fn.l are normalized to length-K lists early in CxtEBTD()/CxtEBTD_missing(). Per-rank dispatch in the iteration loop with auto-fallback for unsupervised ranks.
 
 ## Bugs fixed (as of April 2026)
 1. **init='random_gamma' implemented** — replaces dead uniform/fasttopics branches. Gamma(100,100) init for L, F, W.
@@ -47,6 +48,9 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 6. **Var/PIP dimension restoration** — padded back to original dims at wrap-up to match El/Ef/Ew.
 7. **Rfast::rowsums namespace** — explicit qualification added.
 8. **dplyr/data.table namespace** — dplyr::left_join, dplyr::group_by, dplyr::summarize, @import data.table, @importFrom dplyr %>% added.
+9. **Unsupervised fallback missing in CxtEBTD_missing()** — added ebpm::ebpm_point_gamma fallback when Xcov=NULL, matching CxtEBTD().
+10. **Var/PIP dimension restoration missing in CxtEBTD_missing()** — added same zero-row padding at wrap-up as CxtEBTD(), fixing dimension mismatch in get_pip()/get_credible_interval().
+11. **Rank-specific covariates support** — Xcov now accepts NULL (unsupervised), a matrix (same for all K), or a list of K matrices (per-rank covariates, with NULL elements for unsupervised ranks). ebpm.fn L-mode entry similarly accepts a single function or a list of K functions. Auto-fallback to ebpm::ebpm_point_gamma when a rank has no covariates and the default covariate function is in use.
 
 ## Test results (test_simulation.R — all passing)
 - Test A (unsupervised): Tensor MSE=0.000606, U1/U2/U3 RMSE ~0.10
@@ -60,7 +64,6 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 
 ## Not yet implemented (planned for IJOC paper)
 - Bootstrap/delta method CIs for gamma coefficients
-- Rank-specific covariates (accept list of Xcov matrices)
 - Rank selection utility (elbow on weights, prune_rank())
 - project_tensor() and reconstruct_tensor() for downstream tasks
 - Factor stability index via bootstrap
