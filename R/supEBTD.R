@@ -386,6 +386,18 @@ CxtEBTD = function(X,K,Xcov=NULL,
     tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$Varw; res$qw$Varw <- tmp
     tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$PIPw; res$qw$PIPw <- tmp
   }
+  if (!is.null(res$ql$shape_post_l)) {
+    tmp <- matrix(NA_real_, n_original, K); tmp[!users_zero,] <- res$ql$shape_post_l; res$ql$shape_post_l <- tmp
+    tmp <- matrix(NA_real_, n_original, K); tmp[!users_zero,] <- res$ql$rate_post_l;  res$ql$rate_post_l  <- tmp
+  }
+  if (!is.null(res$qf$shape_post_f)) {
+    tmp <- matrix(NA_real_, p_original, K); tmp[!times_zero,] <- res$qf$shape_post_f; res$qf$shape_post_f <- tmp
+    tmp <- matrix(NA_real_, p_original, K); tmp[!times_zero,] <- res$qf$rate_post_f;  res$qf$rate_post_f  <- tmp
+  }
+  if (!is.null(res$qw$shape_post_w)) {
+    tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$shape_post_w; res$qw$shape_post_w <- tmp
+    tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$rate_post_w;  res$qw$rate_post_w  <- tmp
+  }
   #res$ql$El <- best_EL
   # res$qf$Ef <- best_EF
   # res$qw$Ew <- best_EW

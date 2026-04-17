@@ -14,13 +14,15 @@
 #'   \code{fix_g}, \code{pi0}, \code{control}).
 #'
 #' @return Same structure as \code{\link[ebpm]{ebpm_point_gamma}} but with
-#'   two additional columns in \code{posterior}:
+#'   four additional columns in \code{posterior}:
 #' \describe{
 #'   \item{var}{Posterior variance \eqn{\text{Var}(\theta_i \mid x_i)},
 #'     decomposed as within-component variance plus between-component
 #'     variance from spike uncertainty.}
 #'   \item{pip}{Posterior inclusion probability
 #'     \eqn{P(\theta_i \neq 0 \mid x_i) = 1 - \hat{\pi}_i}.}
+#'   \item{shape_post}{Posterior gamma shape parameter \eqn{a + x_i}.}
+#'   \item{rate_post}{Posterior gamma rate parameter \eqn{b + s_i}.}
 #' }
 #'
 #' @seealso \code{\link[ebpm]{ebpm_point_gamma}},
@@ -57,8 +59,10 @@ ebpm_point_gamma_with_uq <- function(x, s = 1, ...) {
   mu_var       <- var_within + var_between
 
   # augment posterior
-  fit$posterior$var <- mu_var
-  fit$posterior$pip <- 1 - pi_hat
+  fit$posterior$var        <- mu_var
+  fit$posterior$pip        <- 1 - pi_hat
+  fit$posterior$shape_post <- a + x
+  fit$posterior$rate_post  <- b + s
 
   return(fit)
 }
@@ -107,7 +111,9 @@ ebps_with_uq <- function(x, s = NULL, ...) {
   }
 
   # PIP not applicable for smoothing prior
-  fit$posterior$pip <- NA
+  fit$posterior$pip        <- NA
+  fit$posterior$shape_post <- NA
+  fit$posterior$rate_post  <- NA
 
   return(fit)
 }

@@ -104,6 +104,12 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
       res$ql$Varl[,k] = fit$posterior$var
       res$ql$PIPl[,k] = fit$posterior$pip
     }
+    if (!is.null(fit$posterior$shape_post)) {
+      if (is.null(res$ql$shape_post_l)) res$ql$shape_post_l <- matrix(NA_real_, nrow(res$ql$El), ncol(res$ql$El))
+      if (is.null(res$ql$rate_post_l))  res$ql$rate_post_l  <- matrix(NA_real_, nrow(res$ql$El), ncol(res$ql$El))
+      res$ql$shape_post_l[, k] <- fit$posterior$shape_post
+      res$ql$rate_post_l[, k]  <- fit$posterior$rate_post
+    }
     res$Hl[k] = calc_H(l_seq,l_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gl[[k]] = fit$fitted_g
   }
@@ -121,6 +127,12 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
       res$qf$Varf[,k] = fit$posterior$var
       res$qf$PIPf[,k] = fit$posterior$pip
     }
+    if (!is.null(fit$posterior$shape_post)) {
+      if (is.null(res$qf$shape_post_f)) res$qf$shape_post_f <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
+      if (is.null(res$qf$rate_post_f))  res$qf$rate_post_f  <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
+      res$qf$shape_post_f[, k] <- fit$posterior$shape_post
+      res$qf$rate_post_f[, k]  <- fit$posterior$rate_post
+    }
     res$Hf[k] = calc_H(f_seq,f_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gf[[k]] = fit$fitted_g
   }
@@ -136,6 +148,12 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
       if (is.null(res$qw$PIPw)) res$qw$PIPw <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
       res$qw$Varw[,k] = fit$posterior$var
       res$qw$PIPw[,k] = fit$posterior$pip
+    }
+    if (!is.null(fit$posterior$shape_post)) {
+      if (is.null(res$qw$shape_post_w)) res$qw$shape_post_w <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
+      if (is.null(res$qw$rate_post_w))  res$qw$rate_post_w  <- matrix(NA_real_, nrow(res$qw$Ew), ncol(res$qw$Ew))
+      res$qw$shape_post_w[, k] <- fit$posterior$shape_post
+      res$qw$rate_post_w[, k]  <- fit$posterior$rate_post
     }
     res$Hw[k] = calc_H(w_seq,w_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     if(!is.null(fit$fitted_g)) res$gw[[k]] <- fit$fitted_g

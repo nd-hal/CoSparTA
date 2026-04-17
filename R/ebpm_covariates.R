@@ -53,7 +53,11 @@
 #'     variance (uncertainty about whether the spike fired);
 #'     \code{pip} — posterior inclusion probability
 #'     \eqn{P(\theta_i \neq 0 \mid x_i) = 1 - \hat{\pi}_i}, giving the
-#'     probability that observation \eqn{i} has a truly non-zero loading.}
+#'     probability that observation \eqn{i} has a truly non-zero loading;
+#'     \code{shape_post} — posterior gamma shape parameter
+#'     \eqn{\alpha + x_i}, the shape of the gamma kernel in the non-spike
+#'     component; \code{rate_post} — posterior gamma rate parameter
+#'     \eqn{\beta / \lambda_i + s_i}, the rate of the gamma kernel.}
 #'   \item{log_likelihood}{Maximized marginal log-likelihood.}
 #'   \item{convergence_code}{Optimizer convergence code. For \code{nlm}:
 #'     1--2 indicate convergence; 3--5 indicate potential issues (see
@@ -176,10 +180,12 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
   mu_var <- var_within + var_between
   
   posterior <- data.frame(
-    mean    = mu_pm,
-    mean_log = mu_log_pm,
-    var     = mu_var,
-    pip     = 1 - pi_hat
+    mean       = mu_pm,
+    mean_log   = mu_log_pm,
+    var        = mu_var,
+    pip        = 1 - pi_hat,
+    shape_post = alpha_est + x,
+    rate_post  = beta_eff_i + s
   )
 
   fitted_g = list(
