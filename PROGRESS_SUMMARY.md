@@ -58,7 +58,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 10. **Var/PIP dimension restoration missing in CxtEBTD_missing()** — added same zero-row padding at wrap-up as CxtEBTD(), fixing dimension mismatch in get_pip()/get_credible_interval().
 11. **Rank-specific covariates support** — Xcov now accepts NULL (unsupervised), a matrix (same for all K), or a list of K matrices (per-rank covariates, with NULL elements for unsupervised ranks). ebpm.fn L-mode entry similarly accepts a single function or a list of K functions. Auto-fallback to ebpm::ebpm_point_gamma when a rank has no covariates and the default covariate function is in use.
 
-## Test results (test_simulation.R — all passing)
+## Test results (test_simulation.R — Yet to pass again)
 - Test A (unsupervised): Tensor MSE=0.000606, U1/U2/U3 RMSE ~0.10
 - Test B (supervised): Tensor MSE=0.000616, γ₁ slope ≈ 0.93 (true 0.8), Varl/PIPl populated
 - Test C (missing data): RMSE=1.18, MAE=1.03 on held-out nonzeros
