@@ -308,6 +308,11 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
     ebpm.fn.w <- ebpm.fn[[3]]
   }
 
+  # When no covariates, fall back to plain point-gamma for L
+  if (is.null(Xcov)) {
+    ebpm.fn.l <- ebpm::ebpm_point_gamma
+  }
+
   if (verbose) cat('Initializing loadings and factors...\n')
 
   res <- ebpmf_identity_init(X, K, init, maxiter_init, lib_size)
@@ -410,6 +415,20 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
   res$ql$El <- ret_EL
   res$qf$Ef <- ret_EF
   res$qw$Ew <- ret_EW
+
+  # Expand variance/PIP matrices back to original dimensions
+  if (!is.null(res$ql$Varl)) {
+    tmp <- matrix(NA_real_, n_original, K); tmp[!users_zero,] <- res$ql$Varl; res$ql$Varl <- tmp
+    tmp <- matrix(NA_real_, n_original, K); tmp[!users_zero,] <- res$ql$PIPl; res$ql$PIPl <- tmp
+  }
+  if (!is.null(res$qf$Varf)) {
+    tmp <- matrix(NA_real_, p_original, K); tmp[!times_zero,] <- res$qf$Varf; res$qf$Varf <- tmp
+    tmp <- matrix(NA_real_, p_original, K); tmp[!times_zero,] <- res$qf$PIPf; res$qf$PIPf <- tmp
+  }
+  if (!is.null(res$qw$Varw)) {
+    tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$Varw; res$qw$Varw <- tmp
+    tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$PIPw; res$qw$PIPw <- tmp
+  }
 
   return(list(
     EL           = "check res",
