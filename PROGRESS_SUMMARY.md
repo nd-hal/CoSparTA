@@ -10,7 +10,7 @@ CxtEBTD (Covariate-aware Empirical Bayes Tensor Decomposition) is an R package i
 - Current status: 0 errors, 0 warnings on devtools::check()
 
 ## File structure
-CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor() └── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction()
+CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H, all passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor() └── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction()
 
 ## Exported functions
 | Function | Purpose |
@@ -23,9 +23,9 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 | `get_pip()` | Extract posterior inclusion probabilities |
 | `get_credible_interval()` | Compute credible intervals from posterior var |
 | `get_significant_patterns()` | lFDR-based pattern discovery (Algorithms 1+2) |
-| `get_posterior_quantile()` | Exact quantiles from spike-and-slab posterior |
-| `normalize_factors()` | Normalize columns to unit norm, compute component weights λ |
-| `project_tensor()` | Project new tensor data onto learned factors (Eq. 6) |
+| `get_posterior_quantile()` | Exact quantiles from spike-and-slab mixture posterior |
+| `normalize_factors()` | Normalize columns to unit Frobenius norm, compute component weights λ |
+| `project_tensor()` | Project new tensor data onto learned factors (Eq. 6 in ISR paper) |
 | `reconstruct_tensor()` | Reconstruct denoised mean tensor from fitted factors |
 | `generate_missing_mask()` | Simulate missing data for evaluation |
 | `evaluate_missing_prediction()` | Evaluate imputation quality |
@@ -43,7 +43,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 5. Always run with `adj_LF_scale = FALSE` (default TRUE has a latent bug with Ef_smooth, partially guarded)
 6. Always run with `convergence_criteria = 'ELBO'` to match dissertation pipeline
 7. Rank-specific covariates: Xcov and ebpm.fn.l normalized to length-K lists early in CxtEBTD()/CxtEBTD_missing(). Per-rank dispatch with auto-fallback for unsupervised ranks.
-8. Posterior Gamma shape/rate parameters threaded through all modes via lazy-init pattern. Enables exact quantile computation for spike-and-slab posteriors.
+8. Posterior Gamma shape/rate threaded through all modes via lazy-init. Enables exact quantile computation.
 
 ## Bugs fixed (as of April 2026)
 1. **init='random_gamma' implemented** — replaces dead uniform/fasttopics branches. Gamma(100,100) init for L, F, W.
@@ -54,15 +54,19 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 6. **Var/PIP dimension restoration** — padded back to original dims at wrap-up to match El/Ef/Ew.
 7. **Rfast::rowsums namespace** — explicit qualification added.
 8. **dplyr/data.table namespace** — dplyr::left_join, dplyr::group_by, dplyr::summarize, @import data.table, @importFrom dplyr %>% added.
-9. **Unsupervised fallback missing in CxtEBTD_missing()** — added ebpm::ebpm_point_gamma fallback when Xcov=NULL, matching CxtEBTD().
-10. **Var/PIP dimension restoration missing in CxtEBTD_missing()** — added same zero-row padding at wrap-up as CxtEBTD(), fixing dimension mismatch in get_pip()/get_credible_interval().
-11. **Rank-specific covariates support** — Xcov now accepts NULL (unsupervised), a matrix (same for all K), or a list of K matrices (per-rank covariates, with NULL elements for unsupervised ranks). ebpm.fn L-mode entry similarly accepts a single function or a list of K functions. Auto-fallback to ebpm::ebpm_point_gamma when a rank has no covariates and the default covariate function is in use.
+9. **Unsupervised fallback missing in CxtEBTD_missing()** — added ebpm::ebpm_point_gamma fallback when Xcov=NULL.
+10. **Var/PIP dimension restoration missing in CxtEBTD_missing()** — added zero-row padding at wrap-up.
+11. **NA guard in get_posterior_quantile()** — guarded against NA-padded rows from all-zero user restoration and scalar NA shape_post from ebps F-mode.
 
-## Test results (test_simulation.R — Yet to pass again)
-- Test A (unsupervised): Tensor MSE=0.000606, U1/U2/U3 RMSE ~0.10
-- Test B (supervised): Tensor MSE=0.000616, γ₁ slope ≈ 0.93 (true 0.8), Varl/PIPl populated
-- Test C (missing data): RMSE=1.18, MAE=1.03 on held-out nonzeros
-- Tests D–H covering rank-specific covariates, posterior quantiles, normalize_factors, project_tensor, reconstruct_tensor
+## Test results (test_simulation.R — all 8 passing)
+- Test A (unsupervised): MSE=0.000606
+- Test B (supervised): MSE=0.000616, γ₁ slope ≈ 0.93
+- Test C (missing): RMSE=1.178, MAE=1.029
+- Test D (rank-specific covariates): rank 1 covariate_dependent, rank 2 unsupervised
+- Test E (posterior quantiles): ordering invariant holds, F-mode correctly errors
+- Test F (normalize_factors): unit norms, λ descending, reconstruction diff < 1e-15
+- Test G (project_tensor): dims correct, single-obs consistent
+- Test H (reconstruct_tensor): all non-negative, MSE=0.000616
 
 ## Known remaining issues
 - adj_LF_scale=TRUE still has a latent issue: gammaF computed twice (W never scaled). Low priority since we always use FALSE.
