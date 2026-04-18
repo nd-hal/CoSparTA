@@ -298,7 +298,8 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
     'W' = fit$res$qw$rate_post_w
   )
 
-  if (is.null(shape_mat) || is.null(rate_mat)) {
+  if (is.null(shape_mat) || is.null(rate_mat) ||
+      all(is.na(shape_mat)) || all(is.na(rate_mat))) {
     stop("Posterior Gamma parameters not available. Refit the model with the current package version.")
   }
 
@@ -306,7 +307,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 
   out <- lapply(probs, function(tau) {
     q_mat <- matrix(0, nrow = nrow(pip_mat), ncol = ncol(pip_mat))
-    slab_idx <- tau > pi_hat_mat & pi_hat_mat < 1
+    slab_idx <- !is.na(pi_hat_mat) & tau > pi_hat_mat & pi_hat_mat < 1
     if (any(slab_idx)) {
       adjusted_prob <- (tau - pi_hat_mat[slab_idx]) / (1 - pi_hat_mat[slab_idx])
       q_mat[slab_idx] <- qgamma(adjusted_prob,
