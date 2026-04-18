@@ -7,7 +7,7 @@ CxtEBTD (Covariate-aware Empirical Bayes Tensor Decomposition) is an R package i
 - Local: ~/Desktop/CxtEBTD/
 - GitHub: https://github.com/xzhang0407/CxtEBTD (private)
 - Active branch: dev (main kept clean)
-- Current status: 0 errors, 0 warnings on devtools::check()
+- Current status: 0 errors, 0 warnings on devtools::check(); 19 exported functions across 8 R files; 15 tests across 2 test scripts, all passing
 
 ## File structure
 CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H, all passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor() └── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction()
@@ -67,6 +67,15 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 - Test F (normalize_factors): unit norms, λ descending, reconstruction diff < 1e-15
 - Test G (project_tensor): dims correct, single-obs consistent
 - Test H (reconstruct_tensor): all non-negative, MSE=0.000616
+
+## Test results (test_inference_edges.R — all passing)
+- Test I (get_pip with threshold): dims correct, logical output, W-mode works, F-mode returns NULL
+- Test J (get_credible_interval all modes): ordering invariant holds for L and W, F-mode returns CI
+- Test K (get_significant_patterns): 10 active channels per factor, strict alpha reduces discoveries, W-only mode correct
+- Test L (posterior quantiles W-mode): dims correct, ordering invariant
+- Test M (K=1 single component): normalize, reconstruct, quantile all pass
+- Test N (rank-specific covariates + missing data): rank 1 covariate_dependent, rank 2 unsupervised, RMSE=1.180
+- Test O (project_tensor error handling): wrong-p and wrong-w correctly error
 
 ## Known remaining issues
 - adj_LF_scale=TRUE still has a latent issue: gammaF computed twice (W never scaled). Low priority since we always use FALSE.
