@@ -23,6 +23,8 @@ Imports:
   methods
 LinkingTo:
   Rcpp
+Suggests:
+  clue
 Remotes:
   DongyueXie/ebpm,
   DongyueXie/smashrgen
