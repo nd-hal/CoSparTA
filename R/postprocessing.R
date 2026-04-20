@@ -345,3 +345,123 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 
   list(L, F_mat, W)
 }
+
+
+#' Two-Step Covariate Selection via Unsupervised Decomposition
+#'
+#' @description
+#' Implements a two-step procedure for identifying which covariates are
+#' relevant for each tensor component. Step 1: fit an unsupervised
+#' \code{\link{CxtEBTD}} decomposition (no covariates). Step 2: for each
+#' component k, regress the estimated loadings \eqn{E[l_{ik}]} on the
+#' candidate covariate matrix using OLS, and select covariates whose
+#' coefficients are significant at level \code{alpha}.
+#'
+#' @param X A 3-dimensional non-negative integer array of dimensions
+#'   \code{n x p x w}.
+#' @param K Integer. Number of components (CP rank).
+#' @param Xcov_candidates Numeric matrix of dimension \code{n x q} containing
+#'   candidate covariates to screen. Column names are used in the output if
+#'   available.
+#' @param alpha Numeric significance level for covariate selection. Default
+#'   \code{0.05}.
+#' @param verbose Logical. If \code{TRUE}, prints progress and selected
+#'   covariates per rank. Default \code{TRUE}.
+#' @param ... Additional arguments passed to \code{\link{CxtEBTD}} for the
+#'   unsupervised fit (e.g., \code{init}, \code{maxiter}, \code{tol},
+#'   \code{convergence_criteria}).
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{selected}{A list of length K. Each element is an integer vector of
+#'     column indices of \code{Xcov_candidates} whose coefficients are
+#'     significant at level \code{alpha} for that component. Empty integer
+#'     vector if no covariates are significant.}
+#'   \item{summaries}{A list of length K. Each element is the \code{summary.lm}
+#'     object from the OLS regression of El[,k] on Xcov_candidates, giving
+#'     full coefficient estimates, standard errors, t-statistics, and p-values.}
+#'   \item{fit_unsupervised}{The fitted unsupervised \code{\link{CxtEBTD}}
+#'     object, in case the user wants to inspect the decomposition.}
+#' }
+#'
+#' @details
+#' The unsupervised fit uses \code{Xcov = NULL} with all other arguments
+#' passed via \code{...}. The OLS regression for each component k is:
+#' \deqn{E[l_{ik}] = X_{\text{cov}} \beta_k + \epsilon_{ik}}
+#' Covariates are selected if their two-sided p-value is below \code{alpha}.
+#' The intercept is included in the regression but is never selected as a
+#' covariate (it is excluded from the returned indices).
+#'
+#' This is a screening procedure, not a formal statistical test. For rigorous
+#' inference on covariate effects, fit \code{\link{CxtEBTD}} with the selected
+#' covariates and use the estimated \eqn{\gamma} coefficients from the
+#' generative model.
+#'
+#' @examples
+#' \dontrun{
+#' X <- array(rpois(100 * 20 * 10, lambda = 1.5), dim = c(100, 20, 10))
+#' Xcov <- matrix(rnorm(100 * 5), nrow = 100)
+#' colnames(Xcov) <- paste0("cov", 1:5)
+#'
+#' result <- select_covariates(X, K = 3, Xcov_candidates = Xcov,
+#'                              maxiter = 20, convergence_criteria = 'ELBO')
+#'
+#' # Which covariates were selected for each rank?
+#' result$selected
+#'
+#' # Full regression summary for rank 1
+#' result$summaries[[1]]
+#'
+#' # Refit with selected covariates for rank 1
+#' Xcov_selected <- Xcov[, result$selected[[1]], drop = FALSE]
+#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov_selected)
+#' }
+#'
+#' @seealso \code{\link{CxtEBTD}}
+#' @export
+select_covariates <- function(X, K, Xcov_candidates, alpha = 0.05,
+                               verbose = TRUE, ...) {
+
+  # Step 1: unsupervised decomposition
+  if (verbose) cat("Step 1: fitting unsupervised CxtEBTD (K =", K, ")...\n")
+  fit_unsup <- CxtEBTD(X, K = K, Xcov = NULL, ...)
+  El <- fit_unsup$res$ql$El  # n x K
+
+  cov_names <- colnames(Xcov_candidates)
+  if (is.null(cov_names)) cov_names <- paste0("V", seq_len(ncol(Xcov_candidates)))
+
+  selected_list <- vector("list", K)
+  summary_list  <- vector("list", K)
+
+  # Step 2: OLS regression of El[,k] on Xcov_candidates for each component
+  for (k in seq_len(K)) {
+    if (verbose) cat(sprintf("Step 2: screening covariates for rank %d...\n", k))
+
+    lm_fit  <- lm(El[, k] ~ Xcov_candidates)
+    lm_summ <- summary(lm_fit)
+
+    # p-values for all coefficients; row 1 is the intercept — skip it
+    pvals <- lm_summ$coefficients[-1, 4]
+
+    # Selected: column indices (1-indexed into Xcov_candidates) where p < alpha
+    selected_idx <- which(pvals < alpha)
+
+    if (verbose) {
+      if (length(selected_idx) == 0) {
+        cat(sprintf("  Rank %d: no covariates selected at alpha = %g\n", k, alpha))
+      } else {
+        cat(sprintf("  Rank %d: selected covariates: %s\n", k,
+                    paste(cov_names[selected_idx], collapse = ", ")))
+      }
+    }
+
+    selected_list[[k]] <- selected_idx
+    summary_list[[k]]  <- lm_summ
+  }
+
+  list(
+    selected         = selected_list,
+    summaries        = summary_list,
+    fit_unsupervised = fit_unsup
+  )
+}
