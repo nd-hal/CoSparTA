@@ -18,6 +18,7 @@ Imports:
   Rfast,
   slam,
   dplyr,
+  ggplot2,
   methods
 Remotes:
   DongyueXie/ebpm,

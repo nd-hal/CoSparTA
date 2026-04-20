@@ -250,3 +250,98 @@ reconstruct_tensor <- function(fit) {
 
   X_hat
 }
+
+
+#' Initialize Factor Matrices via CP-APR (Poisson Tensor Factorization)
+#'
+#' @description
+#' Computes non-negative CP-APR (Alternating Poisson Regression) factor matrices
+#' to use as warm-start initialization for \code{\link{CxtEBTD}}. Calls
+#' \code{pyCP_APR} via \code{reticulate}, which requires Python 3.9+ with
+#' \code{pyCP_APR} and \code{numpy} installed.
+#'
+#' @param X A 3-dimensional non-negative integer array of dimensions
+#'   \code{n x p x w}.
+#' @param K Integer. Number of components (CP rank).
+#' @param n_iters Integer. Maximum number of CP-APR iterations. Default \code{150}.
+#' @param method Character string. Optimization backend for pyCP_APR: \code{'torch'}
+#'   (default) or \code{'numpy'}.
+#' @param random_state Integer. Random seed for reproducibility. Default \code{42}.
+#' @param virtualenv Character string. Name of the Python virtual environment
+#'   containing pyCP_APR. Default \code{'ebtd1'}.
+#'
+#' @return A list of three matrices \code{list(L, F, W)} with dimensions
+#'   \code{n x K}, \code{p x K}, \code{w x K}, suitable for passing as the
+#'   \code{init} argument to \code{\link{CxtEBTD}} or \code{\link{CxtEBTD_missing}}.
+#'
+#' @details
+#' Requires the \code{reticulate} R package and a Python environment with
+#' \code{pyCP_APR} installed. To set up:
+#' \preformatted{
+#' pip install pyCP_APR numpy
+#' }
+#' The function adds a tiny constant (1e-7) to the last tensor slice
+#' \code{X[, p, w]} to prevent pyCP_APR from failing on all-zero boundary
+#' slices. pyCP_APR returns factor matrices with a zero-padded first row
+#' (0-indexed), which is automatically removed before returning.
+#'
+#' @examples
+#' \dontrun{
+#' X <- array(rpois(100 * 20 * 10, lambda = 1.5), dim = c(100, 20, 10))
+#' init <- init_cpapr(X, K = 3)
+#' fit <- CxtEBTD(X, K = 3, init = init)
+#' }
+#'
+#' @seealso \code{\link{CxtEBTD}}
+#'
+#' @export
+init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
+                       random_state = 42, virtualenv = 'ebtd1') {
+
+  if (!requireNamespace("reticulate", quietly = TRUE)) {
+    stop("Package 'reticulate' is required for CP-APR initialization. ",
+         "Install it with install.packages('reticulate').")
+  }
+
+  reticulate::use_virtualenv(virtualenv, required = TRUE)
+
+  modules <- tryCatch({
+    list(
+      cpapr = reticulate::import("pyCP_APR"),
+      np    = reticulate::import("numpy")
+    )
+  }, error = function(e) {
+    stop("Failed to import pyCP_APR or numpy from virtualenv '", virtualenv, "'. ",
+         "Install them with: pip install pyCP_APR numpy\n",
+         "Original error: ", conditionMessage(e))
+  })
+
+  cpapr <- modules$cpapr
+
+  # Add tiny constant to last slice to avoid all-zero boundary issues
+  X[, dim(X)[2], dim(X)[3]] <- X[, dim(X)[2], dim(X)[3]] + 1e-7
+
+  # Convert to sparse coordinate format
+  X_list <- rbind_sparse_matrix(X, reindex = TRUE)
+  coords  <- reticulate::r_to_py(X_list[, c("V1", "V2", "V3")])
+  coords  <- coords$to_numpy()
+  nnz     <- reticulate::r_to_py(X_list[, "v"])
+  nnz     <- nnz[["v"]]$values
+
+  # Fit CP-APR
+  model <- cpapr$CP_APR(
+    n_iters      = as.integer(n_iters),
+    random_state = as.integer(random_state),
+    verbose      = 0L,
+    method       = method,
+    return_type  = 'numpy'
+  )
+  Mj <- model$fit(coords = coords, values = nnz, rank = as.integer(K))
+
+  # Extract factors — drop the zero-padded first row (0-indexed artifact)
+  L     <- Mj$Factors[[1]][-1, , drop = FALSE]
+  F_mat <- Mj$Factors[[2]][-1, , drop = FALSE]
+  W     <- Mj$Factors[[3]][-1, , drop = FALSE]
+
+  list(L, F_mat, W)
+}
