@@ -3,6 +3,7 @@
 export(CxtEBTD)
 export(CxtEBTD_missing)
 export(adjLF)
+export(build_tensor)
 export(calc_EZ_3d_cpp)
 export(calc_qz_sparse_cpp)
 export(ebpm_point_gamma_multiplier_covariates)
