@@ -465,3 +465,300 @@ select_covariates <- function(X, K, Xcov_candidates, alpha = 0.05,
     fit_unsupervised = fit_unsup
   )
 }
+
+
+#' Match and Align Estimated Factors to Reference Factors
+#'
+#' @description
+#' Finds the optimal permutation that aligns the columns of estimated factor
+#' matrices to reference (true) factor matrices using the Tucker congruence
+#' coefficient (cosine similarity) and the Hungarian algorithm. This is the
+#' standard method for comparing tensor decompositions in simulation studies,
+#' where the component ordering is arbitrary.
+#'
+#' For each pair of columns (one from reference, one from estimated), the
+#' congruence coefficient is \eqn{a^\top b / (\|a\| \|b\|)}. When multiple
+#' modes are provided, the joint congruence is the product of per-mode
+#' congruences, so a good match must be good on all modes simultaneously.
+#'
+#' @param ref A list of reference factor matrices, one per mode. Each matrix
+#'   has dimensions \code{d_m x K}. Typically the true factors from a
+#'   simulation.
+#' @param est A list of estimated factor matrices, same structure as \code{ref}.
+#'   Dimensions must match: same number of modes, same \code{d_m} per mode,
+#'   same K.
+#' @param absolute_value Logical. If \code{TRUE} (default), uses absolute
+#'   cosine similarity, ignoring sign differences. Appropriate for
+#'   non-negative decompositions.
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{permutation}{Integer vector of length K giving the optimal column
+#'     permutation. \code{permutation[i]} is the column index in \code{est}
+#'     that best matches column \code{i} in \code{ref}.}
+#'   \item{mean_congruence}{Numeric scalar: mean congruence coefficient across
+#'     all K matched pairs. 1.0 = perfect recovery.}
+#'   \item{per_component}{Numeric vector of length K giving the congruence
+#'     for each matched pair.}
+#' }
+#'
+#' @details
+#' Requires the \code{clue} package for the Hungarian algorithm
+#' (\code{clue::solve_LSAP}). If not installed, falls back to a greedy
+#' matching algorithm with a warning.
+#'
+#' @examples
+#' \dontrun{
+#' # Simulation: compare estimated to true factors
+#' sim <- simulate_tensor(n = 100, p = 20, w = 10, K = 3)
+#' fit <- CxtEBTD(sim$X, K = 3, Xcov = sim$Xcov)
+#' nf <- normalize_factors(fit)
+#'
+#' result <- match_factors(
+#'   ref = list(sim$U1_true, sim$U2_true, sim$U3_true),
+#'   est = list(nf$El, nf$Ef, nf$Ew)
+#' )
+#' result$mean_congruence   # overall recovery quality
+#' result$permutation       # which estimated component matches which true one
+#' }
+#'
+#' @seealso \code{\link{normalize_factors}}, \code{\link{simulate_tensor}}
+#' @export
+match_factors <- function(ref, est, absolute_value = TRUE) {
+
+  # --- input validation ---
+  if (!is.list(ref) || !is.list(est)) {
+    stop("'ref' and 'est' must both be lists of factor matrices.")
+  }
+  M <- length(ref)
+  if (length(est) != M) {
+    stop("'ref' and 'est' must have the same number of modes.")
+  }
+  K <- ncol(ref[[1]])
+  for (m in seq_len(M)) {
+    if (!is.matrix(ref[[m]]) || !is.matrix(est[[m]])) {
+      stop(sprintf("ref[[%d]] and est[[%d]] must be matrices.", m, m))
+    }
+    if (nrow(ref[[m]]) != nrow(est[[m]])) {
+      stop(sprintf("Mode %d: ref has %d rows but est has %d rows.",
+                   m, nrow(ref[[m]]), nrow(est[[m]])))
+    }
+    if (ncol(ref[[m]]) != K || ncol(est[[m]]) != K) {
+      stop(sprintf("Mode %d: all matrices must have K = %d columns.", m, K))
+    }
+  }
+
+  # --- normalize columns to unit norm, guarding against zero-norm columns ---
+  normalize_cols <- function(M_mat) {
+    norms <- sqrt(colSums(M_mat^2))
+    norms[norms == 0] <- 1  # leave zero columns unchanged
+    sweep(M_mat, 2, norms, "/")
+  }
+
+  ref_n <- lapply(ref, normalize_cols)
+  est_n <- lapply(est, normalize_cols)
+
+  # --- per-mode K x K cosine similarity matrices, then joint product ---
+  S_joint <- matrix(1, nrow = K, ncol = K)
+  for (m in seq_len(M)) {
+    S_m <- t(ref_n[[m]]) %*% est_n[[m]]  # K x K
+    if (absolute_value) S_m <- abs(S_m)
+    S_joint <- S_joint * S_m
+  }
+
+  # --- optimal assignment via Hungarian algorithm (clue) or greedy fallback ---
+  if (requireNamespace("clue", quietly = TRUE)) {
+    perm <- as.integer(clue::solve_LSAP(S_joint, maximum = TRUE))
+  } else {
+    warning("Package 'clue' not available; using greedy matching (may be suboptimal). ",
+            "Install with install.packages('clue') for optimal results.")
+    perm    <- integer(K)
+    used    <- logical(K)
+    # sort rows by their maximum similarity so strongest matches go first
+    row_ord <- order(apply(S_joint, 1, max), decreasing = TRUE)
+    for (i in row_ord) {
+      scores      <- S_joint[i, ]
+      scores[used] <- -Inf
+      j           <- which.max(scores)
+      perm[i]     <- j
+      used[j]     <- TRUE
+    }
+  }
+
+  # --- per-component congruences from the matched pairs ---
+  per_component <- S_joint[cbind(seq_len(K), perm)]
+
+  list(
+    permutation     = perm,
+    mean_congruence = mean(per_component),
+    per_component   = per_component
+  )
+}
+
+
+#' Simulate a Count Tensor with Known Ground Truth
+#'
+#' @description
+#' Generates a synthetic Poisson count tensor from a CP structure with known
+#' factor matrices, optional covariate effects, and spike-and-slab sparsity.
+#' Useful for simulation studies evaluating decomposition accuracy.
+#'
+#' @param n Integer. Number of observations (mode 1). Default \code{100}.
+#' @param p Integer. Number of time points (mode 2). Default \code{20}.
+#' @param w Integer. Number of channels (mode 3). Default \code{10}.
+#' @param K Integer. Number of components. Default \code{3}.
+#' @param Xcov Optional numeric covariate matrix of dimension \code{n x q}.
+#'   If \code{NULL}, covariates are generated automatically: an intercept,
+#'   a binary covariate, and a continuous covariate. Default \code{NULL}.
+#' @param gamma_true Optional list of length K, where each element is a
+#'   numeric vector of covariate coefficients for that component. If
+#'   \code{NULL} and \code{Xcov} is also \code{NULL}, random coefficients
+#'   are generated. If \code{Xcov} is provided, must be supplied.
+#'   Set to \code{FALSE} to generate an unsupervised tensor (no covariate
+#'   effects). Default \code{NULL}.
+#' @param pi0 Numeric. Spike (structural zero) probability for mode-1
+#'   factors. Default \code{0.2}.
+#' @param alpha_true Numeric. Gamma shape parameter for mode-1 slab.
+#'   Default \code{3}.
+#' @param beta_true Numeric. Gamma rate parameter for mode-1 slab.
+#'   Default \code{2}.
+#' @param weights Numeric vector of length K giving component weights.
+#'   Default \code{NULL} generates decreasing weights.
+#' @param sparsity Numeric scaling factor controlling overall tensor
+#'   sparsity (higher = sparser). Default \code{20}.
+#' @param seed Integer random seed. Default \code{42}.
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{X}{The observed Poisson count tensor, \code{n x p x w}.}
+#'   \item{lambda_true}{The true Poisson rate tensor, \code{n x p x w}.}
+#'   \item{U1_true}{True mode-1 factor matrix (normalized to unit norm),
+#'     \code{n x K}.}
+#'   \item{U2_true}{True mode-2 factor matrix (normalized), \code{p x K}.}
+#'   \item{U3_true}{True mode-3 factor matrix (normalized), \code{w x K}.}
+#'   \item{weights}{Component weights, length K.}
+#'   \item{Xcov}{Covariate matrix used, \code{n x q}. \code{NULL} if
+#'     unsupervised.}
+#'   \item{gamma_true}{List of true covariate coefficient vectors.
+#'     \code{NULL} if unsupervised.}
+#'   \item{sparsity_pct}{Percentage of zeros in \code{X}.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Supervised simulation
+#' sim <- simulate_tensor(n = 100, p = 20, w = 10, K = 3)
+#' fit <- CxtEBTD(sim$X, K = 3, Xcov = sim$Xcov)
+#'
+#' # Unsupervised simulation
+#' sim0 <- simulate_tensor(n = 100, p = 20, w = 10, K = 2, gamma_true = FALSE)
+#' fit0 <- CxtEBTD(sim0$X, K = 2)
+#' }
+#'
+#' @seealso \code{\link{CxtEBTD}}, \code{\link{match_factors}}
+#' @export
+simulate_tensor <- function(n = 100, p = 20, w = 10, K = 3,
+                             Xcov = NULL, gamma_true = NULL,
+                             pi0 = 0.2, alpha_true = 3, beta_true = 2,
+                             weights = NULL, sparsity = 20, seed = 42) {
+
+  set.seed(seed)
+
+  unsupervised <- isFALSE(gamma_true)
+
+  # --- covariates ---
+  if (unsupervised) {
+    Xcov       <- NULL
+    gamma_true <- NULL
+  } else {
+    if (is.null(Xcov)) {
+      Xcov <- cbind(1, rbinom(n, 1, 0.5), runif(n, 20, 80))
+    }
+    if (is.null(gamma_true)) {
+      gamma_true <- lapply(seq_len(K), function(k) {
+        c(0, runif(1, -1, 1), runif(1, -0.3, 0.3))
+      })
+    }
+    if (length(gamma_true) != K) {
+      stop("'gamma_true' must be a list of length K or FALSE.")
+    }
+    if (ncol(Xcov) != length(gamma_true[[1]])) {
+      stop("Number of columns in Xcov must match length of gamma_true vectors.")
+    }
+  }
+
+  # --- mode-1 factors (U1_true): covariate-dependent spike-and-slab ---
+  U1_true <- matrix(0, nrow = n, ncol = K)
+  for (k in seq_len(K)) {
+    if (unsupervised) {
+      lambda_i <- rep(1, n)
+    } else {
+      lambda_i <- exp(Xcov %*% gamma_true[[k]])
+    }
+    active <- rbinom(n, 1, 1 - pi0)
+    for (i in seq_len(n)) {
+      if (active[i] == 1) {
+        U1_true[i, k] <- rgamma(1, shape = alpha_true,
+                                rate  = beta_true / lambda_i[i])
+      }
+    }
+    col_norm <- sqrt(sum(U1_true[, k]^2))
+    if (col_norm > 0) U1_true[, k] <- U1_true[, k] / col_norm
+  }
+
+  # --- mode-2 factors (U2_true): block structure ---
+  U2_true    <- matrix(0, nrow = p, ncol = K)
+  block_size <- floor(p / K)
+  for (k in seq_len(K)) {
+    start_idx <- (k - 1) * block_size + 1
+    end_idx   <- if (k == K) p else k * block_size
+    block_len <- end_idx - start_idx + 1
+    U2_true[start_idx:end_idx, k] <- 1 +
+      rgamma(block_len, shape = 2, rate = 2)
+    col_norm <- sqrt(sum(U2_true[, k]^2))
+    if (col_norm > 0) U2_true[, k] <- U2_true[, k] / col_norm
+  }
+
+  # --- mode-3 factors (U3_true): sparse group structure ---
+  U3_true   <- matrix(0, nrow = w, ncol = K)
+  group_size <- max(1L, floor(w / K))
+  for (k in seq_len(K)) {
+    start_idx <- (k - 1) * group_size + 1
+    end_idx   <- if (k == K) w else k * group_size
+    grp_len   <- end_idx - start_idx + 1
+    U3_true[start_idx:end_idx, k] <- rgamma(grp_len, shape = 2, rate = 1)
+    col_norm <- sqrt(sum(U3_true[, k]^2))
+    if (col_norm > 0) U3_true[, k] <- U3_true[, k] / col_norm
+  }
+
+  # --- component weights ---
+  if (is.null(weights)) {
+    weights <- seq(2, 0.5, length.out = K)
+  }
+
+  # --- true rate tensor ---
+  scalenpw   <- sqrt(n) * sqrt(p) * sqrt(w)
+  lambda_true <- array(0, dim = c(n, p, w))
+  for (k in seq_len(K)) {
+    lambda_true <- lambda_true +
+      weights[k] * (U1_true[, k] %o% U2_true[, k] %o% U3_true[, k])
+  }
+  lambda_true <- lambda_true * scalenpw / sparsity
+
+  # --- observed tensor ---
+  X <- array(rpois(n * p * w, lambda_true), dim = c(n, p, w))
+
+  sparsity_pct <- 100 * mean(X == 0)
+
+  list(
+    X            = X,
+    lambda_true  = lambda_true,
+    U1_true      = U1_true,
+    U2_true      = U2_true,
+    U3_true      = U3_true,
+    weights      = weights,
+    Xcov         = Xcov,
+    gamma_true   = gamma_true,
+    sparsity_pct = sparsity_pct
+  )
+}
