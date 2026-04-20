@@ -7,10 +7,10 @@ CxtEBTD (Covariate-aware Empirical Bayes Tensor Decomposition) is an R package i
 - Local: ~/Desktop/CxtEBTD/
 - GitHub: https://github.com/xzhang0407/CxtEBTD (private)
 - Active branch: dev (main kept clean)
-- Current status: 0 errors, 0 warnings on devtools::check(); 19 exported functions across 8 R files; 15 tests across 2 test scripts, all passing
+- Current status: 0 errors, 0 warnings on devtools::check(); 22 exported functions across 10 R files + 2 C++ source files; 15 tests across 2 test scripts, all passing
 
 ## File structure
-CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H, all passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor() └── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction()
+CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H, all passing) ├── test_inference_edges.R ← edge-case tests (Tests I–O, all passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor(), init_cpapr(), select_covariates() ├── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction() ├── visualization.R ← plot_time_factors(), plot_channel_factors() ├── rcpp_wrappers.R ← calc_EZ_3d_fast() thin wrapper for C++ backend ├── RcppExports.R ← auto-generated Rcpp bridge └── src/ ├── calc_EZ_3d_cpp.cpp ← C++ sparse weighted aggregation └── calc_qz_sparse_cpp.cpp ← C++ sparse softmax
 
 ## Exported functions
 | Function | Purpose |
@@ -29,6 +29,10 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 | `reconstruct_tensor()` | Reconstruct denoised mean tensor from fitted factors |
 | `generate_missing_mask()` | Simulate missing data for evaluation |
 | `evaluate_missing_prediction()` | Evaluate imputation quality |
+| `plot_time_factors()` | Faceted line plot of time-mode factors |
+| `plot_channel_factors()` | Faceted bar plot of channel-mode factors with optional grouping |
+| `init_cpapr()` | CP-APR warm-start initialization via pyCP_APR/reticulate |
+| `select_covariates()` | Two-step covariate screening: unsupervised fit → OLS regression |
 | `adjLF()` | Scale loadings/factors to similar norms |
 | `mKL()` | Mean KL divergence |
 | `poisson_to_multinom()` | Standardize Poisson factorization |
@@ -44,6 +48,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 6. Always run with `convergence_criteria = 'ELBO'` to match dissertation pipeline
 7. Rank-specific covariates: Xcov and ebpm.fn.l normalized to length-K lists early in CxtEBTD()/CxtEBTD_missing(). Per-rank dispatch with auto-fallback for unsupervised ranks.
 8. Posterior Gamma shape/rate threaded through all modes via lazy-init. Enables exact quantile computation.
+9. Rcpp backends: `calc_EZ_3d` (sparse weighted aggregation) and `calc_qz_sparse` (softmax at non-zero entries) rewritten in C++. Eliminates dplyr overhead and avoids dense n×p×w×K array allocation. R fallbacks retained in codebase.
 
 ## Bugs fixed (as of April 2026)
 1. **init='random_gamma' implemented** — replaces dead uniform/fasttopics branches. Gamma(100,100) init for L, F, W.
@@ -57,6 +62,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 9. **Unsupervised fallback missing in CxtEBTD_missing()** — added ebpm::ebpm_point_gamma fallback when Xcov=NULL.
 10. **Var/PIP dimension restoration missing in CxtEBTD_missing()** — added zero-row padding at wrap-up.
 11. **NA guard in get_posterior_quantile()** — guarded against NA-padded rows from all-zero user restoration and scalar NA shape_post from ebps F-mode.
+12. **Rcpp wrapper x$x vs x$v** — wrapper was passing NULL column instead of sparse count values. Fixed during validation.
 
 ## Test results (test_simulation.R — all 8 passing)
 - Test A (unsupervised): MSE=0.000606
@@ -85,10 +91,12 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 - Rank selection utility (elbow on weights, prune_rank())
 - Factor stability index via bootstrap
 - Contrastive trait analysis (Algorithm 3, group comparison)
-- Visualization functions (trait summary plot: channel bars + time line + PIP-overlaid user loadings)
+- User loading visualization (trait summary plot: channel bars + time line + PIP-overlaid user loadings)
 - Sparsity warning function
+- Pre-processing utility (build_tensor from raw event log)
 - Unit tests with testthat
 - Vignette with worked example on real data
+- Sparse ELBO computation (calc_stm_obj Rcpp rewrite)
 
 ## Dissertation pipeline calling convention
 Always called with:
