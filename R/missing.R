@@ -333,13 +333,8 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
 
   res <- ebpmf_identity_init(X, K, init, maxiter_init, lib_size)
 
-  alpha     <- res$ql$Elogl[x$V1, , drop = FALSE] +
-               res$qf$Elogf[x$V2, , drop = FALSE] +
-               res$qw$Elogw[x$V3, , drop = FALSE]
-  exp_offset <- matrixStats::rowMaxs(alpha)
-  alpha      <- alpha - outer(exp_offset, rep(1, K), FUN = '*')
-  alpha      <- exp(alpha)
-  alpha      <- alpha / rowSums(alpha)
+  alpha <- calc_qz_sparse_cpp(as.integer(x$V1), as.integer(x$V2), as.integer(x$V3),
+                               as.matrix(res$ql$Elogl), as.matrix(res$qf$Elogf), as.matrix(res$qw$Elogw))
 
   obj    <- c()
   obj[1] <- -Inf
@@ -350,7 +345,7 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
   for (iter in 1:maxiter) {
 
     for (k in 1:K) {
-      Ez <- .calc_EZ_3d_missing(x, alpha[, k], n, p, w)
+      Ez <- calc_EZ_3d_fast(x, alpha[, k], n, p, w)
       xcov_k <- if (!is.null(Xcov)) Xcov[[k]] else NULL
       fn_l_k <- ebpm_fn_l_list[[k]]
       if (is.null(xcov_k) && identical(fn_l_k, ebpm_point_gamma_multiplier_covariates)) {
@@ -364,13 +359,8 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
       )
     }
 
-    alpha      <- res$ql$Elogl[x$V1, , drop = FALSE] +
-                  res$qf$Elogf[x$V2, , drop = FALSE] +
-                  res$qw$Elogw[x$V3, , drop = FALSE]
-    exp_offset <- matrixStats::rowMaxs(alpha)
-    alpha      <- alpha - outer(exp_offset, rep(1, K), FUN = '*')
-    alpha      <- exp(alpha)
-    alpha      <- alpha / rowSums(alpha)
+    alpha <- calc_qz_sparse_cpp(as.integer(x$V1), as.integer(x$V2), as.integer(x$V3),
+                                 as.matrix(res$ql$Elogl), as.matrix(res$qf$Elogf), as.matrix(res$qw$Elogw))
 
     if (convergence_criteria == 'ELBO') {
       obj[iter + 1] <- .calc_stm_obj_missing(x, n, p, w, K, res,

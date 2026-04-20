@@ -19,7 +19,10 @@ Imports:
   slam,
   dplyr,
   ggplot2,
+  Rcpp,
   methods
+LinkingTo:
+  Rcpp
 Remotes:
   DongyueXie/ebpm,
   DongyueXie/smashrgen
