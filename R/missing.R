@@ -333,8 +333,11 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
 
   res <- ebpmf_identity_init(X, K, init, maxiter_init, lib_size)
 
-  alpha <- calc_qz_sparse_cpp(as.integer(x$V1), as.integer(x$V2), as.integer(x$V3),
-                               as.matrix(res$ql$Elogl), as.matrix(res$qf$Elogf), as.matrix(res$qw$Elogw))
+  alpha = res$ql$Elogl[x$V1,,drop=F] + res$qf$Elogf[x$V2,,drop=F] + res$qw$Elogw[x$V3,,drop=F]
+  exp_offset = matrixStats::rowMaxs(alpha)
+  alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
+  alpha = exp(alpha)
+  alpha = alpha/Rfast::rowsums(alpha)
 
   obj    <- c()
   obj[1] <- -Inf
@@ -359,8 +362,11 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
       )
     }
 
-    alpha <- calc_qz_sparse_cpp(as.integer(x$V1), as.integer(x$V2), as.integer(x$V3),
-                                 as.matrix(res$ql$Elogl), as.matrix(res$qf$Elogf), as.matrix(res$qw$Elogw))
+    alpha = res$ql$Elogl[x$V1,,drop=F] + res$qf$Elogf[x$V2,,drop=F] + res$qw$Elogw[x$V3,,drop=F]
+    exp_offset = matrixStats::rowMaxs(alpha)
+    alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
+    alpha = exp(alpha)
+    alpha = alpha/Rfast::rowsums(alpha)
 
     if (convergence_criteria == 'ELBO') {
       obj[iter + 1] <- .calc_stm_obj_missing(x, n, p, w, K, res,

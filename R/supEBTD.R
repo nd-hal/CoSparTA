@@ -196,8 +196,11 @@ CxtEBTD = function(X,K,Xcov=NULL,
 
   res = ebpmf_identity_init(X,K,init,maxiter_init,lib_size)
   # what are we doing here? is alpha a scale?
-  alpha = calc_qz_sparse_cpp(as.integer(x$V1), as.integer(x$V2), as.integer(x$V3),
-                              as.matrix(res$ql$Elogl), as.matrix(res$qf$Elogf), as.matrix(res$qw$Elogw))
+  alpha = res$ql$Elogl[x$V1,,drop=F] + res$qf$Elogf[x$V2,,drop=F] + res$qw$Elogw[x$V3,,drop=F]
+  exp_offset = matrixStats::rowMaxs(alpha)
+  alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
+  alpha = exp(alpha)
+  alpha = alpha/Rfast::rowsums(alpha)
 
   obj = c()
   obj[1] = -Inf
@@ -230,8 +233,11 @@ CxtEBTD = function(X,K,Xcov=NULL,
     }
 
     # Update Z
-    alpha = calc_qz_sparse_cpp(as.integer(x$V1), as.integer(x$V2), as.integer(x$V3),
-                                as.matrix(res$ql$Elogl), as.matrix(res$qf$Elogf), as.matrix(res$qw$Elogw))
+    alpha = res$ql$Elogl[x$V1,,drop=F] + res$qf$Elogf[x$V2,,drop=F] + res$qw$Elogw[x$V3,,drop=F]
+    exp_offset = matrixStats::rowMaxs(alpha)
+    alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
+    alpha = exp(alpha)
+    alpha = alpha/Rfast::rowsums(alpha)
 
     if(convergence_criteria == 'mKLabs'){
       obj[iter+1] = mKL(x$x,(tcrossprod(res$ql$El,res$qf$Ef)*res$lib_size)[non0_idx])
