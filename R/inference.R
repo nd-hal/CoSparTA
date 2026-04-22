@@ -328,6 +328,232 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #' Given a vector of local-fdr values, finds the largest discovery set such
 #' that the mean local-fdr does not exceed alpha.
 #'
+#' Confidence Intervals for Covariate Coefficients (Gamma)
+#'
+#' @description
+#' Computes confidence intervals for the covariate effect parameters
+#' \eqn{\gamma} estimated by \code{\link{CxtEBTD}}. Two methods are available:
+#'
+#' \describe{
+#'   \item{\code{"delta"}}{Fast asymptotic intervals based on the Hessian of
+#'     the marginal log-likelihood from the EBPM optimization. These are
+#'     \strong{conditional} standard errors — they measure uncertainty in
+#'     \eqn{\gamma} given the current F and W estimates, and may
+#'     underestimate the true uncertainty. Recommended for exploratory
+#'     screening.}
+#'   \item{\code{"bootstrap"}}{Parametric bootstrap intervals. Generates
+#'     \code{B} synthetic tensors from the fitted Poisson rates, refits
+#'     \code{\link{CxtEBTD}} on each, and collects the bootstrap distribution
+#'     of \eqn{\gamma}. This correctly accounts for all sources of estimation
+#'     uncertainty (including uncertainty in F and W). Recommended for
+#'     publication-quality inference. Computationally expensive: requires
+#'     \code{B} full model refits.}
+#' }
+#'
+#' @param fit A fitted object returned by \code{\link{CxtEBTD}}.
+#' @param method Character: \code{"delta"} or \code{"bootstrap"}.
+#'   Default \code{"bootstrap"}.
+#' @param level Numeric confidence level in \code{(0, 1)}. Default \code{0.95}.
+#' @param B Integer. Number of bootstrap replicates (only used when
+#'   \code{method = "bootstrap"}). Default \code{200}.
+#' @param X The original tensor used to fit the model (required for
+#'   \code{method = "bootstrap"}).
+#' @param K Integer. Number of components (required for bootstrap).
+#' @param Xcov Covariate matrix or list used in the original fit (required
+#'   for bootstrap).
+#' @param verbose Logical. If \code{TRUE}, prints bootstrap progress.
+#'   Default \code{TRUE}.
+#' @param ... Additional arguments passed to \code{\link{CxtEBTD}} during
+#'   bootstrap refitting (e.g., \code{maxiter}, \code{init},
+#'   \code{convergence_criteria}).
+#'
+#' @return A list of length K (one element per component). Each element is
+#'   a named list with:
+#' \describe{
+#'   \item{estimate}{Numeric vector of gamma estimates from the original fit.}
+#'   \item{se}{Standard errors.}
+#'   \item{lower}{Lower confidence bound.}
+#'   \item{upper}{Upper confidence bound.}
+#'   \item{pvalue}{Two-sided p-values (Wald test for delta method;
+#'     bootstrap percentile-based for bootstrap, computed as
+#'     \code{2 * min(prop >= 0, prop <= 0)}).}
+#'   \item{method}{Character string indicating which method was used.}
+#' }
+#' If a component was fitted without covariates (unsupervised rank),
+#' its entry is \code{NULL}.
+#'
+#' @examples
+#' \dontrun{
+#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov, maxiter = 50)
+#'
+#' # Fast delta method (exploratory)
+#' ci_delta <- get_gamma_ci(fit, method = "delta")
+#'
+#' # Parametric bootstrap (publication quality)
+#' ci_boot <- get_gamma_ci(fit, method = "bootstrap", B = 200,
+#'                          X = X, K = 3, Xcov = Xcov,
+#'                          maxiter = 50, convergence_criteria = "ELBO")
+#' }
+#'
+#' @seealso \code{\link{CxtEBTD}},
+#'   \code{\link{ebpm_point_gamma_multiplier_covariates}}
+#' @export
+get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
+                          B = 200, X = NULL, K = NULL, Xcov = NULL,
+                          verbose = TRUE, ...) {
+
+  method <- match.arg(method, c("delta", "bootstrap"))
+  gl     <- fit$res$gl
+  K_fit  <- length(gl)
+
+  # ------------------------------------------------------------------ #
+  #  Delta method                                                        #
+  # ------------------------------------------------------------------ #
+  if (method == "delta") {
+    results <- vector("list", K_fit)
+
+    for (k in seq_len(K_fit)) {
+      if (is.null(gl[[k]]) || isTRUE(gl[[k]]$type != "covariate_dependent")) {
+        results[[k]] <- NULL
+        next
+      }
+
+      gamma_est <- gl[[k]]$gamma
+      q         <- length(gamma_est)
+      hessian   <- gl[[k]]$hessian
+
+      if (is.null(hessian)) {
+        stop("Hessian not available for component ", k, ". ",
+             "Refit the model with the current package version.")
+      }
+
+      # gamma parameters are at positions 4:(3+q) in the full Hessian
+      # (positions 1-3 are logit_pi0, log_alpha, log_beta)
+      H_gamma <- hessian[4:(3 + q), 4:(3 + q), drop = FALSE]
+
+      vcov_gamma <- tryCatch(
+        solve(H_gamma),
+        error = function(e) {
+          warning(sprintf("Hessian inversion failed for component %d: %s. ",
+                          k, conditionMessage(e)),
+                  "Standard errors set to NA.")
+          NULL
+        }
+      )
+
+      if (is.null(vcov_gamma)) {
+        se <- rep(NA_real_, q)
+      } else {
+        se <- sqrt(pmax(diag(vcov_gamma), 0))
+      }
+
+      z     <- qnorm((1 + level) / 2)
+      lower  <- gamma_est - z * se
+      upper  <- gamma_est + z * se
+      pvalue <- 2 * pnorm(-abs(gamma_est / se))
+
+      results[[k]] <- list(
+        estimate = gamma_est,
+        se       = se,
+        lower    = lower,
+        upper    = upper,
+        pvalue   = pvalue,
+        method   = "delta"
+      )
+    }
+
+    return(results)
+  }
+
+  # ------------------------------------------------------------------ #
+  #  Bootstrap method                                                    #
+  # ------------------------------------------------------------------ #
+  if (is.null(X) || is.null(K) || is.null(Xcov)) {
+    stop("'X', 'K', and 'Xcov' must be provided for method = 'bootstrap'.")
+  }
+
+  lambda_hat <- reconstruct_tensor(fit)
+
+  # Capture extra args and enforce adj_LF_scale = FALSE, verbose = FALSE
+  extra_args <- list(...)
+  if (is.null(extra_args$adj_LF_scale)) extra_args$adj_LF_scale <- FALSE
+  extra_args$verbose <- FALSE
+
+  # Determine q for each rank; initialise storage
+  gamma_boot <- vector("list", K_fit)
+  for (k in seq_len(K_fit)) {
+    if (!is.null(gl[[k]]) && isTRUE(gl[[k]]$type == "covariate_dependent")) {
+      q <- length(gl[[k]]$gamma)
+      gamma_boot[[k]] <- matrix(NA_real_, nrow = B, ncol = q)
+    }
+  }
+
+  for (b in seq_len(B)) {
+    if (verbose && b %% 10 == 0) {
+      cat(sprintf("Bootstrap %d/%d\n", b, B))
+    }
+
+    X_star <- array(rpois(length(lambda_hat), lambda_hat), dim = dim(lambda_hat))
+
+    fit_star <- tryCatch(
+      do.call(CxtEBTD, c(list(X = X_star, K = K, Xcov = Xcov), extra_args)),
+      error = function(e) {
+        warning(sprintf("Bootstrap replicate %d failed: %s — row filled with NA.", b,
+                        conditionMessage(e)))
+        NULL
+      }
+    )
+
+    if (is.null(fit_star)) next
+
+    for (k in seq_len(K_fit)) {
+      if (!is.null(gamma_boot[[k]]) &&
+          !is.null(fit_star$res$gl[[k]]) &&
+          isTRUE(fit_star$res$gl[[k]]$type == "covariate_dependent")) {
+        gamma_k <- fit_star$res$gl[[k]]$gamma
+        if (length(gamma_k) == ncol(gamma_boot[[k]])) {
+          gamma_boot[[k]][b, ] <- gamma_k
+        }
+      }
+    }
+  }
+
+  # Summarise bootstrap distributions
+  results <- vector("list", K_fit)
+  for (k in seq_len(K_fit)) {
+    if (is.null(gamma_boot[[k]])) {
+      results[[k]] <- NULL
+      next
+    }
+
+    gamma_est <- gl[[k]]$gamma
+    q         <- length(gamma_est)
+    boot_mat  <- gamma_boot[[k]]
+
+    se    <- apply(boot_mat, 2, sd,       na.rm = TRUE)
+    lower <- apply(boot_mat, 2, quantile, probs = (1 - level) / 2, na.rm = TRUE)
+    upper <- apply(boot_mat, 2, quantile, probs = (1 + level) / 2, na.rm = TRUE)
+
+    pvalue <- vapply(seq_len(q), function(j) {
+      col_j <- boot_mat[, j]
+      2 * min(mean(col_j >= 0, na.rm = TRUE),
+              mean(col_j <= 0, na.rm = TRUE))
+    }, numeric(1))
+
+    results[[k]] <- list(
+      estimate = gamma_est,
+      se       = se,
+      lower    = lower,
+      upper    = upper,
+      pvalue   = pvalue,
+      method   = "bootstrap"
+    )
+  }
+
+  results
+}
+
+
 #' @param lfdr_vals Numeric vector of local-fdr values in \code{[0, 1]}.
 #' @param alpha Numeric FDR level.
 #'

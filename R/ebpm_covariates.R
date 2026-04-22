@@ -116,7 +116,8 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
     do.call(nlm, c(
       list(pg_multiplier_nlm_fn, transform_param_multiplier(g_init, n_gamma)),
       fn_params,
-      control
+      control,
+      list(hessian = TRUE)
     ))
   }, silent = TRUE)
 
@@ -203,7 +204,8 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
     fitted_g = fitted_g,
     posterior = posterior,
     log_likelihood = -opt_result$minimum,
-    convergence_code = opt_result$code
+    convergence_code = opt_result$code,
+    hessian = if (!is.null(opt_result$hessian)) opt_result$hessian else NULL
   ))
 }
 

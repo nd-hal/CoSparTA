@@ -112,6 +112,7 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     }
     res$Hl[k] = calc_H(l_seq,l_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gl[[k]] = fit$fitted_g
+    if (!is.null(fit$hessian)) res$gl[[k]]$hessian <- fit$hessian
   }
 
   # update F
