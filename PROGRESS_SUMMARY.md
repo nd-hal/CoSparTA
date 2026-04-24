@@ -7,10 +7,10 @@ CxtEBTD (Covariate-aware Empirical Bayes Tensor Decomposition) is an R package i
 - Local: ~/Desktop/CxtEBTD/
 - GitHub: https://github.com/xzhang0407/CxtEBTD (private)
 - Active branch: dev (main kept clean)
-- Current status: 0 errors, 0 warnings on devtools::check(); 22 exported functions across 10 R files + 2 C++ source files; 15 tests across 2 test scripts, all passing
+- Current status: 0 errors, 0 warnings on devtools::check(); 27 exported functions across 12 R files + 2 C++ source files; 15+ tests across 2 test scripts, all passing
 
 ## File structure
-CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H, all passing) ├── test_inference_edges.R ← edge-case tests (Tests I–O, all passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor(), init_cpapr(), select_covariates() ├── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction() ├── visualization.R ← plot_time_factors(), plot_channel_factors() ├── rcpp_wrappers.R ← calc_EZ_3d_fast() thin wrapper for C++ backend ├── RcppExports.R ← auto-generated Rcpp bridge └── src/ ├── calc_EZ_3d_cpp.cpp ← C++ sparse weighted aggregation └── calc_qz_sparse_cpp.cpp ← C++ sparse softmax
+CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├── LICENSE ├── test_simulation.R ← end-to-end test script (Tests A–H, all passing) ├── test_inference_edges.R ← edge-case tests (Tests I–O, all passing) └── R/ ├── supEBTD.R ← main function CxtEBTD() ├── ebpm_covariates.R ← novel covariate-aware EBPM ├── ebpm_wrappers.R ← UQ wrappers for external EBPM functions ├── utils.R ← sparse tensor ops, normalization helpers ├── internals.R ← shared internal helpers, EM building blocks ├── inference.R ← get_pip(), get_credible_interval(), get_significant_patterns(), get_posterior_quantile(), get_gamma_ci() ├── postprocessing.R ← normalize_factors(), project_tensor(), reconstruct_tensor(), init_cpapr(), select_covariates(), match_factors(), simulate_tensor() ├── preprocessing.R ← build_tensor() ├── missing.R ← CxtEBTD_missing(), generate_missing_mask(), evaluate_missing_prediction() ├── visualization.R ← plot_time_factors(), plot_channel_factors() ├── rcpp_wrappers.R ← calc_EZ_3d_fast() thin wrapper for C++ backend ├── RcppExports.R ← auto-generated Rcpp bridge └── src/ ├── calc_EZ_3d_cpp.cpp ← C++ sparse weighted aggregation └── calc_qz_sparse_cpp.cpp ← C++ sparse softmax (available but R path is faster)
 
 ## Exported functions
 | Function | Purpose |
@@ -24,15 +24,19 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 | `get_credible_interval()` | Compute credible intervals from posterior var |
 | `get_significant_patterns()` | lFDR-based pattern discovery (Algorithms 1+2) |
 | `get_posterior_quantile()` | Exact quantiles from spike-and-slab mixture posterior |
+| `get_gamma_ci()` | Confidence intervals for covariate coefficients via delta method or parametric bootstrap |
 | `normalize_factors()` | Normalize columns to unit Frobenius norm, compute component weights λ |
 | `project_tensor()` | Project new tensor data onto learned factors (Eq. 6 in ISR paper) |
 | `reconstruct_tensor()` | Reconstruct denoised mean tensor from fitted factors |
+| `match_factors()` | Optimal factor matching via Tucker congruence coefficient and Hungarian algorithm |
+| `simulate_tensor()` | Generate synthetic Poisson count tensor with known ground truth and optional covariates |
+| `build_tensor()` | Convert long-format data to 3D tensor array with optional time binning (numeric and POSIXct) |
 | `generate_missing_mask()` | Simulate missing data for evaluation |
 | `evaluate_missing_prediction()` | Evaluate imputation quality |
-| `plot_time_factors()` | Faceted line plot of time-mode factors |
-| `plot_channel_factors()` | Faceted bar plot of channel-mode factors with optional grouping |
 | `init_cpapr()` | CP-APR warm-start initialization via pyCP_APR/reticulate |
 | `select_covariates()` | Two-step covariate screening: unsupervised fit → OLS regression |
+| `plot_time_factors()` | Faceted line plot of time-mode factors |
+| `plot_channel_factors()` | Faceted bar plot of channel-mode factors with optional grouping |
 | `adjLF()` | Scale loadings/factors to similar norms |
 | `mKL()` | Mean KL divergence |
 | `poisson_to_multinom()` | Standardize Poisson factorization |
@@ -49,6 +53,8 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 7. Rank-specific covariates: Xcov and ebpm.fn.l normalized to length-K lists early in CxtEBTD()/CxtEBTD_missing(). Per-rank dispatch with auto-fallback for unsupervised ranks.
 8. Posterior Gamma shape/rate threaded through all modes via lazy-init. Enables exact quantile computation.
 9. Rcpp backends: `calc_EZ_3d` (sparse weighted aggregation) and `calc_qz_sparse` (softmax at non-zero entries) rewritten in C++. Eliminates dplyr overhead and avoids dense n×p×w×K array allocation. R fallbacks retained in codebase.
+10. Hessian from nlm stored in `gl[[k]]$hessian` for delta method gamma CIs. Parametric bootstrap refits full model B times for publication-quality inference.
+11. Rcpp: `calc_EZ_3d` rewritten in C++ (2–15x speedup). Alpha softmax kept in R (faster than C++ for this shape due to vectorized BLAS).
 
 ## Bugs fixed (as of April 2026)
 1. **init='random_gamma' implemented** — replaces dead uniform/fasttopics branches. Gamma(100,100) init for L, F, W.
@@ -87,16 +93,16 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 - adj_LF_scale=TRUE still has a latent issue: gammaF computed twice (W never scaled). Low priority since we always use FALSE.
 
 ## Not yet implemented (planned for IJOC paper)
-- Bootstrap/delta method CIs for gamma coefficients
-- Rank selection utility (elbow on weights, prune_rank())
+- Sparse ELBO computation (calc_stm_obj Rcpp rewrite)
+- Rank selection utility (elbow plot, prune_rank())
 - Factor stability index via bootstrap
 - Contrastive trait analysis (Algorithm 3, group comparison)
-- User loading visualization (trait summary plot: channel bars + time line + PIP-overlaid user loadings)
-- Sparsity warning function
-- Pre-processing utility (build_tensor from raw event log)
+- User loading visualization (plot_user_loadings())
+- Sparsity/data fitness warning function
+- Normal prior option via pluggable ebpm.fn
 - Unit tests with testthat
 - Vignette with worked example on real data
-- Sparse ELBO computation (calc_stm_obj Rcpp rewrite)
+- GPU backend via torch R package
 
 ## Dissertation pipeline calling convention
 Always called with:
