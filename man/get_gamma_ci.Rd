@@ -70,7 +70,7 @@ Computes confidence intervals for the covariate effect parameters
 \describe{
   \item{\code{"delta"}}{Fast asymptotic intervals based on the Hessian of
     the marginal log-likelihood from the EBPM optimization. These are
-    \strong{conditional} standard errors — they measure uncertainty in
+    \strong{conditional} standard errors -- they measure uncertainty in
     \eqn{\gamma} given the current F and W estimates, and may
     underestimate the true uncertainty. Recommended for exploratory
     screening.}

@@ -337,7 +337,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #' \describe{
 #'   \item{\code{"delta"}}{Fast asymptotic intervals based on the Hessian of
 #'     the marginal log-likelihood from the EBPM optimization. These are
-#'     \strong{conditional} standard errors — they measure uncertainty in
+#'     \strong{conditional} standard errors -- they measure uncertainty in
 #'     \eqn{\gamma} given the current F and W estimates, and may
 #'     underestimate the true uncertainty. Recommended for exploratory
 #'     screening.}
@@ -498,7 +498,7 @@ get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
     fit_star <- tryCatch(
       do.call(CxtEBTD, c(list(X = X_star, K = K, Xcov = Xcov), extra_args)),
       error = function(e) {
-        warning(sprintf("Bootstrap replicate %d failed: %s — row filled with NA.", b,
+        warning(sprintf("Bootstrap replicate %d failed: %s -- row filled with NA.", b,
                         conditionMessage(e)))
         NULL
       }
