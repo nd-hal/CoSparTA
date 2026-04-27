@@ -12,6 +12,7 @@ get_gamma_ci(
   X = NULL,
   K = NULL,
   Xcov = NULL,
+  init_fn = NULL,
   verbose = TRUE,
   ...
 )
@@ -34,6 +35,16 @@ Default \code{"bootstrap"}.}
 
 \item{Xcov}{Covariate matrix or list used in the original fit (required
 for bootstrap).}
+
+\item{init_fn}{Optional function with signature
+\code{function(X_star, K)} that returns an initialization object
+(e.g., a list of three matrices from \code{\link{init_cpapr}}).
+If provided, this function is called on each bootstrap replicate
+to generate a fresh initialization. If \code{NULL}, the
+\code{init} argument from \code{...} is reused for all
+replicates. Using per-replicate initialization (e.g., via
+\code{init_cpapr}) is recommended for publication-quality
+bootstrap inference.}
 
 \item{verbose}{Logical. If \code{TRUE}, prints bootstrap progress.
 Default \code{TRUE}.}

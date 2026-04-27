@@ -361,6 +361,15 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #' @param K Integer. Number of components (required for bootstrap).
 #' @param Xcov Covariate matrix or list used in the original fit (required
 #'   for bootstrap).
+#' @param init_fn Optional function with signature
+#'   \code{function(X_star, K)} that returns an initialization object
+#'   (e.g., a list of three matrices from \code{\link{init_cpapr}}).
+#'   If provided, this function is called on each bootstrap replicate
+#'   to generate a fresh initialization. If \code{NULL}, the
+#'   \code{init} argument from \code{...} is reused for all
+#'   replicates. Using per-replicate initialization (e.g., via
+#'   \code{init_cpapr}) is recommended for publication-quality
+#'   bootstrap inference.
 #' @param verbose Logical. If \code{TRUE}, prints bootstrap progress.
 #'   Default \code{TRUE}.
 #' @param ... Additional arguments passed to \code{\link{CxtEBTD}} during
@@ -400,7 +409,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #' @export
 get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
                           B = 200, X = NULL, K = NULL, Xcov = NULL,
-                          verbose = TRUE, ...) {
+                          init_fn = NULL, verbose = TRUE, ...) {
 
   method <- match.arg(method, c("delta", "bootstrap"))
   gl     <- fit$res$gl
@@ -488,12 +497,29 @@ get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
     }
   }
 
+  nf_orig <- normalize_factors(fit)
+
   for (b in seq_len(B)) {
     if (verbose && b %% 10 == 0) {
       cat(sprintf("Bootstrap %d/%d\n", b, B))
     }
 
     X_star <- array(rpois(length(lambda_hat), lambda_hat), dim = dim(lambda_hat))
+
+    # Per-replicate initialization if init_fn provided
+    if (!is.null(init_fn)) {
+      boot_init <- tryCatch(
+        init_fn(X_star, K),
+        error = function(e) {
+          warning(sprintf("Bootstrap %d: init_fn failed (%s), using fallback.",
+                          b, conditionMessage(e)))
+          NULL
+        }
+      )
+      if (!is.null(boot_init)) {
+        extra_args$init <- boot_init
+      }
+    }
 
     fit_star <- tryCatch(
       do.call(CxtEBTD, c(list(X = X_star, K = K, Xcov = Xcov), extra_args)),
@@ -506,11 +532,19 @@ get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
 
     if (is.null(fit_star)) next
 
+    nf_star <- normalize_factors(fit_star)
+    mf_b <- match_factors(
+      ref = list(nf_orig$El, nf_orig$Ef, nf_orig$Ew),
+      est = list(nf_star$El, nf_star$Ef, nf_star$Ew)
+    )
+    perm_b <- mf_b$permutation
+
     for (k in seq_len(K_fit)) {
+      k_boot <- perm_b[k]
       if (!is.null(gamma_boot[[k]]) &&
-          !is.null(fit_star$res$gl[[k]]) &&
-          isTRUE(fit_star$res$gl[[k]]$type == "covariate_dependent")) {
-        gamma_k <- fit_star$res$gl[[k]]$gamma
+          !is.null(fit_star$res$gl[[k_boot]]) &&
+          isTRUE(fit_star$res$gl[[k_boot]]$type == "covariate_dependent")) {
+        gamma_k <- fit_star$res$gl[[k_boot]]$gamma
         if (length(gamma_k) == ncol(gamma_boot[[k]])) {
           gamma_boot[[k]][b, ] <- gamma_k
         }
