@@ -180,7 +180,10 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' @param init Initialization method. Default \code{'random_gamma'}.
 #' @param maxiter Maximum EM iterations. Default \code{100}.
 #' @param maxiter_init Maximum initialization iterations. Default \code{100}.
-#' @param tol Convergence tolerance. Default \code{1e-8}.
+#' @param tol Convergence tolerance. Default \code{1e-6}.
+#' @param n_stable Integer. Number of consecutive iterations with factor change
+#'   below \code{tol} required before declaring convergence. Only used when
+#'   \code{convergence_criteria = 'factor_change'}. Default \code{3}.
 #' @param ebpm.fn List of three EBPM functions for L, F, W modes respectively.
 #'   Default uses \code{ebpm_point_gamma_multiplier_covariates} for L,
 #'   \code{ebps_with_uq} for F, and \code{ebpm_point_gamma_with_uq} for W.
@@ -231,7 +234,7 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
                              init = 'random_gamma',
                              maxiter = 100,
                              maxiter_init = 100,
-                             tol = 1e-8,
+                             tol = 1e-6,
                              ebpm.fn = c(ebpm_point_gamma_multiplier_covariates,
                                          ebps_with_uq,
                                          ebpm_point_gamma_with_uq),
@@ -241,7 +244,12 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
                              verbose = TRUE,
                              adj_LF_scale = TRUE,
                              convergence_criteria = 'ELBO',
+                             n_stable = 3L,
                              U1_true = NULL, U2_true = NULL, U3_true = NULL) {
+
+  if (convergence_criteria == 'factor_change' && tol <= 1e-8) {
+    tol <- 1e-6
+  }
 
   start_time <- Sys.time()
 
@@ -348,6 +356,7 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
   El_prev <- NULL
   Ef_prev <- NULL
   Ew_prev <- NULL
+  stable_count <- 0L
 
   for (iter in 1:maxiter) {
 
@@ -379,14 +388,19 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
     if (convergence_criteria == 'factor_change') {
       norm_col <- function(M) apply(M, 2, function(x) x / sqrt(sum(x^2)))
       max_change <- max(
-        max(abs(norm_col(res$ql$El) - norm_col(El_prev))),
-        max(abs(norm_col(res$qf$Ef) - norm_col(Ef_prev))),
-        max(abs(norm_col(res$qw$Ew) - norm_col(Ew_prev)))
+        max(abs(norm_col(res$ql$El) - norm_col(El_prev)), na.rm = TRUE),
+        max(abs(norm_col(res$qf$Ef) - norm_col(Ef_prev)), na.rm = TRUE),
+        max(abs(norm_col(res$qw$Ew) - norm_col(Ew_prev)), na.rm = TRUE)
       )
+      if (max_change < tol) {
+        stable_count <- stable_count + 1L
+        if (stable_count >= n_stable) break
+      } else {
+        stable_count <- 0L
+      }
       if (verbose && iter %% printevery == 0) {
         cat(sprintf('Iter %d, factor_change = %e\n', iter, max_change))
       }
-      if (max_change < tol) break
     }
 
     if (convergence_criteria == 'ELBO') {

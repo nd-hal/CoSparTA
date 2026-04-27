@@ -13,7 +13,7 @@ CxtEBTD_missing(
   init = "random_gamma",
   maxiter = 100,
   maxiter_init = 100,
-  tol = 1e-08,
+  tol = 1e-06,
   ebpm.fn = c(ebpm_point_gamma_multiplier_covariates, ebps_with_uq,
     ebpm_point_gamma_with_uq),
   fix_L = FALSE,
@@ -24,6 +24,7 @@ CxtEBTD_missing(
   verbose = TRUE,
   adj_LF_scale = TRUE,
   convergence_criteria = "ELBO",
+  n_stable = 3L,
   U1_true = NULL,
   U2_true = NULL,
   U3_true = NULL
@@ -54,7 +55,7 @@ from \code{is.na(X)}. Default \code{NULL}.}
 
 \item{maxiter_init}{Maximum initialization iterations. Default \code{100}.}
 
-\item{tol}{Convergence tolerance. Default \code{1e-8}.}
+\item{tol}{Convergence tolerance. Default \code{1e-6}.}
 
 \item{ebpm.fn}{List of three EBPM functions for L, F, W modes respectively.
 Default uses \code{ebpm_point_gamma_multiplier_covariates} for L,
@@ -78,6 +79,10 @@ Default uses \code{ebpm_point_gamma_multiplier_covariates} for L,
 
 \item{convergence_criteria}{Convergence criterion: \code{'ELBO'} (default)
 or \code{'mKLabs'}.}
+
+\item{n_stable}{Integer. Number of consecutive iterations with factor change
+below \code{tol} required before declaring convergence. Only used when
+\code{convergence_criteria = 'factor_change'}. Default \code{3}.}
 
 \item{U1_true}{Optional true L matrix for simulation evaluation.}
 

@@ -12,7 +12,7 @@ CxtEBTD(
   init = "random_gamma",
   maxiter = 100,
   maxiter_init = 100,
-  tol = 1e-08,
+  tol = 1e-06,
   ebpm.fn = c(ebpm_point_gamma_multiplier_covariates, ebps_with_uq,
     ebpm_point_gamma_with_uq),
   fix_L = FALSE,
@@ -23,6 +23,7 @@ CxtEBTD(
   verbose = TRUE,
   adj_LF_scale = TRUE,
   convergence_criteria = "mKLabs",
+  n_stable = 3L,
   U1_true = NULL,
   U2_true = NULL,
   U3_true = NULL
@@ -55,7 +56,7 @@ Default \code{'random_gamma'}.}
 initialization step. Default \code{100}.}
 
 \item{tol}{Numeric. Convergence tolerance. Iterations stop when the change
-in the objective is below this threshold. Default \code{1e-8}.}
+in the objective is below this threshold. Default \code{1e-6}.}
 
 \item{ebpm.fn}{A single function or list of three functions specifying
 the empirical Bayes prior for the L, F, and W modes respectively.
@@ -88,6 +89,10 @@ iteration to balance their column norms. Default \code{TRUE}.}
 \item{convergence_criteria}{Character string specifying the convergence
 criterion: \code{'mKLabs'} (mean KL divergence, default) or
 \code{'ELBO'} (evidence lower bound).}
+
+\item{n_stable}{Integer. Number of consecutive iterations with factor change
+below \code{tol} required before declaring convergence. Only used when
+\code{convergence_criteria = 'factor_change'}. Default \code{3}.}
 
 \item{U1_true}{Optional matrix of true observation-mode factors, used to
 track reconstruction error during simulation studies. Default \code{NULL}.}
