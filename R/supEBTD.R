@@ -219,9 +219,16 @@ CxtEBTD = function(X,K,Xcov=NULL,
     cat('\n')
   }
 
+  El_prev <- NULL
+  Ef_prev <- NULL
+  Ew_prev <- NULL
+
   # ######################################
   for(iter in 1:maxiter){ # this is the update algo
     #print(iter)
+    El_prev <- res$ql$El
+    Ef_prev <- res$qf$Ef
+    Ew_prev <- res$qw$Ew
     for(k in 1:K) {
       Ez = calc_EZ_3d_fast(x, alpha[,k], n, p, w)
       xcov_k <- if (!is.null(Xcov)) Xcov[[k]] else NULL
@@ -238,6 +245,22 @@ CxtEBTD = function(X,K,Xcov=NULL,
     alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
     alpha = exp(alpha)
     alpha = alpha/Rfast::rowsums(alpha)
+
+    if(convergence_criteria == 'factor_change'){
+      norm_col <- function(M) apply(M, 2, function(x) x / sqrt(sum(x^2)))
+      max_change <- max(
+        max(abs(norm_col(res$ql$El) - norm_col(El_prev))),
+        max(abs(norm_col(res$qf$Ef) - norm_col(Ef_prev))),
+        max(abs(norm_col(res$qw$Ew) - norm_col(Ew_prev)))
+      )
+      if(verbose){
+        if(iter%%printevery==0){
+          cat(sprintf('At iter %d, factor_change = %e', iter, max_change))
+          cat('\n')
+        }
+      }
+      if(max_change < tol) break
+    }
 
     if(convergence_criteria == 'mKLabs'){
       obj[iter+1] = mKL(x$x,(tcrossprod(res$ql$El,res$qf$Ef)*res$lib_size)[non0_idx])
