@@ -24,7 +24,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 | `get_credible_interval()` | Compute credible intervals from posterior var |
 | `get_significant_patterns()` | lFDR-based pattern discovery (Algorithms 1+2) |
 | `get_posterior_quantile()` | Exact quantiles from spike-and-slab mixture posterior |
-| `get_gamma_ci()` | Confidence intervals for covariate coefficients via delta method or parametric bootstrap |
+| `get_gamma_ci()` | Confidence intervals for covariate coefficients via delta method or parametric bootstrap; `init_fn` parameter enables per-replicate bootstrap initialization |
 | `normalize_factors()` | Normalize columns to unit Frobenius norm, compute component weights λ |
 | `project_tensor()` | Project new tensor data onto learned factors (Eq. 6 in ISR paper) |
 | `reconstruct_tensor()` | Reconstruct denoised mean tensor from fitted factors |
@@ -55,9 +55,12 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 9. Rcpp backends: `calc_EZ_3d` (sparse weighted aggregation) and `calc_qz_sparse` (softmax at non-zero entries) rewritten in C++. Eliminates dplyr overhead and avoids dense n×p×w×K array allocation. R fallbacks retained in codebase.
 10. Hessian from nlm stored in `gl[[k]]$hessian` for delta method gamma CIs. Parametric bootstrap refits full model B times for publication-quality inference.
 11. Rcpp: `calc_EZ_3d` rewritten in C++ (2–15x speedup). Alpha softmax kept in R (faster than C++ for this shape due to vectorized BLAS).
+12. `convergence_criteria = 'factor_change'`: monitors max absolute change in unit-normalized factor columns across iterations. Default tol = 1e-6. Factors typically converge in 5-10 iterations; remaining ELBO gains reflect scale redistribution not pattern change.
+13. Intercept should be excluded from Xcov in simulations — beta parameter absorbs baseline rate, making gamma_0 unidentifiable.
 
 ## Bugs fixed (as of April 2026)
 1. **init='random_gamma' implemented** — replaces dead uniform/fasttopics branches. Gamma(100,100) init for L, F, W.
+13. **Bootstrap label switching in get_gamma_ci()** — bootstrap loop now uses match_factors() to align each replicate's factors to the original fit before extracting gamma.
 2. **diff_U NULL guard** — iteration tracking block now only runs when U1_true/U2_true/U3_true supplied.
 3. **adj_LF_scale Ef_smooth crash** — guarded lines referencing Ef_smooth/Elogf_smooth which are never populated.
 4. **Unsupervised L-mode fallback** — Xcov=NULL now correctly falls back to ebpm::ebpm_point_gamma. Previously broken.
@@ -91,6 +94,7 @@ CxtEBTD/ ├── DESCRIPTION ├── NAMESPACE ├── README.md ├──
 
 ## Known remaining issues
 - adj_LF_scale=TRUE still has a latent issue: gammaF computed twice (W never scaled). Low priority since we always use FALSE.
+- **Gamma attenuation**: strong covariate effects (e.g., gamma=0.8) can be attenuated due to partial confounding with pi0. Moderate effects recover well.
 
 ## Not yet implemented (planned for IJOC paper)
 - Sparse ELBO computation (calc_stm_obj Rcpp rewrite)
