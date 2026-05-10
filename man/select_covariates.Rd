@@ -4,17 +4,38 @@
 \alias{select_covariates}
 \title{Two-Step Covariate Selection via Unsupervised Decomposition}
 \usage{
-select_covariates(X, K, Xcov_candidates, alpha = 0.05, verbose = TRUE, ...)
+select_covariates(
+  X,
+  K,
+  covariate_data,
+  fit = NULL,
+  El = NULL,
+  alpha = 0.05,
+  verbose = TRUE,
+  ...
+)
 }
 \arguments{
 \item{X}{A 3-dimensional non-negative integer array of dimensions
-\code{n x p x w}.}
+\code{n x p x w}. Required when neither \code{fit} nor \code{El} is
+supplied.}
 
-\item{K}{Integer. Number of components (CP rank).}
+\item{K}{Integer. Number of components (CP rank). When \code{El} is provided
+directly, \code{K} must equal \code{ncol(El)}.}
 
-\item{Xcov_candidates}{Numeric matrix of dimension \code{n x q} containing
+\item{covariate_data}{Numeric matrix of dimension \code{n x q} containing
 candidate covariates to screen. Column names are used in the output if
 available.}
+
+\item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
+\code{\link{CxtEBTD_missing}}. If supplied, \code{El} is extracted via
+\code{normalize_factors(fit)$El} and no internal \code{CxtEBTD} call is
+made. Either \code{fit} or \code{El} or neither (with \code{X} and
+\code{K}) must be provided.}
+
+\item{El}{Numeric matrix of dimensions \code{n x K} (observation loading
+matrix). If provided, used directly — no \code{CxtEBTD} fit is run and
+\code{fit} is ignored.}
 
 \item{alpha}{Numeric significance level for covariate selection. Default
 \code{0.05}.}
@@ -22,35 +43,40 @@ available.}
 \item{verbose}{Logical. If \code{TRUE}, prints progress and selected
 covariates per rank. Default \code{TRUE}.}
 
-\item{...}{Additional arguments passed to \code{\link{CxtEBTD}} for the
-unsupervised fit (e.g., \code{init}, \code{maxiter}, \code{tol},
-\code{convergence_criteria}).}
+\item{...}{Additional arguments passed to \code{\link{CxtEBTD}} when
+running the internal unsupervised fit (e.g., \code{init}, \code{maxiter},
+\code{tol}, \code{convergence_criteria}). Ignored when \code{fit} or
+\code{El} is supplied.}
 }
 \value{
 A named list with:
 \describe{
   \item{selected}{A list of length K. Each element is an integer vector of
-    column indices of \code{Xcov_candidates} whose coefficients are
+    column indices of \code{covariate_data} whose coefficients are
     significant at level \code{alpha} for that component. Empty integer
     vector if no covariates are significant.}
   \item{summaries}{A list of length K. Each element is the \code{summary.lm}
-    object from the OLS regression of El[,k] on Xcov_candidates, giving
+    object from the OLS regression of El[,k] on \code{covariate_data}, giving
     full coefficient estimates, standard errors, t-statistics, and p-values.}
   \item{fit_unsupervised}{The fitted unsupervised \code{\link{CxtEBTD}}
-    object, in case the user wants to inspect the decomposition.}
+    object when the internal fit was run, the supplied \code{fit} object when
+    that was used, or \code{NULL} when \code{El} was provided directly.}
 }
 }
 \description{
-Implements a two-step procedure for identifying which covariates are
-relevant for each tensor component. Step 1: fit an unsupervised
-\code{\link{CxtEBTD}} decomposition (no covariates). Step 2: for each
-component k, regress the estimated loadings \eqn{E[l_{ik}]} on the
-candidate covariate matrix using OLS, and select covariates whose
-coefficients are significant at level \code{alpha}.
+Identifies which covariates are relevant for each tensor component by
+regressing observation loadings on a candidate covariate matrix using OLS
+and selecting covariates whose coefficients are significant at level
+\code{alpha}. The loading matrix \eqn{E[l_{ik}]} can be supplied in three
+ways: (1) provide \code{El} directly, (2) provide a fitted \code{fit} object
+to extract \code{El} via \code{\link{normalize_factors}}, or (3) provide
+\code{X} and \code{K} so the function fits an unsupervised
+\code{\link{CxtEBTD}} internally (original two-step behaviour).
 }
 \details{
-The unsupervised fit uses \code{Xcov = NULL} with all other arguments
-passed via \code{...}. The OLS regression for each component k is:
+When running the internal unsupervised fit, \code{Xcov = NULL} is used and
+all \code{...} arguments are forwarded to \code{\link{CxtEBTD}}. The OLS
+regression for each component k is:
 \deqn{E[l_{ik}] = X_{\text{cov}} \beta_k + \epsilon_{ik}}
 Covariates are selected if their two-sided p-value is below \code{alpha}.
 The intercept is included in the regression but is never selected as a
@@ -67,8 +93,17 @@ X <- array(rpois(100 * 20 * 10, lambda = 1.5), dim = c(100, 20, 10))
 Xcov <- matrix(rnorm(100 * 5), nrow = 100)
 colnames(Xcov) <- paste0("cov", 1:5)
 
-result <- select_covariates(X, K = 3, Xcov_candidates = Xcov,
+# Style 1: internal unsupervised fit (original behaviour)
+result <- select_covariates(X, K = 3, covariate_data = Xcov,
                              maxiter = 20, convergence_criteria = 'ELBO')
+
+# Style 2: supply a fitted object
+fit <- CxtEBTD(X, K = 3)
+result2 <- select_covariates(X, K = 3, covariate_data = Xcov, fit = fit)
+
+# Style 3: supply El directly
+nf <- normalize_factors(fit)
+result3 <- select_covariates(X, K = 3, covariate_data = Xcov, El = nf$El)
 
 # Which covariates were selected for each rank?
 result$selected
@@ -83,5 +118,5 @@ fit <- CxtEBTD(X, K = 3, Xcov = Xcov_selected)
 
 }
 \seealso{
-\code{\link{CxtEBTD}}
+\code{\link{CxtEBTD}}, \code{\link{normalize_factors}}
 }

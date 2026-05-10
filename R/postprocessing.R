@@ -368,43 +368,58 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #' Two-Step Covariate Selection via Unsupervised Decomposition
 #'
 #' @description
-#' Implements a two-step procedure for identifying which covariates are
-#' relevant for each tensor component. Step 1: fit an unsupervised
-#' \code{\link{CxtEBTD}} decomposition (no covariates). Step 2: for each
-#' component k, regress the estimated loadings \eqn{E[l_{ik}]} on the
-#' candidate covariate matrix using OLS, and select covariates whose
-#' coefficients are significant at level \code{alpha}.
+#' Identifies which covariates are relevant for each tensor component by
+#' regressing observation loadings on a candidate covariate matrix using OLS
+#' and selecting covariates whose coefficients are significant at level
+#' \code{alpha}. The loading matrix \eqn{E[l_{ik}]} can be supplied in three
+#' ways: (1) provide \code{El} directly, (2) provide a fitted \code{fit} object
+#' to extract \code{El} via \code{\link{normalize_factors}}, or (3) provide
+#' \code{X} and \code{K} so the function fits an unsupervised
+#' \code{\link{CxtEBTD}} internally (original two-step behaviour).
 #'
 #' @param X A 3-dimensional non-negative integer array of dimensions
-#'   \code{n x p x w}.
-#' @param K Integer. Number of components (CP rank).
-#' @param Xcov_candidates Numeric matrix of dimension \code{n x q} containing
+#'   \code{n x p x w}. Required when neither \code{fit} nor \code{El} is
+#'   supplied.
+#' @param K Integer. Number of components (CP rank). When \code{El} is provided
+#'   directly, \code{K} must equal \code{ncol(El)}.
+#' @param covariate_data Numeric matrix of dimension \code{n x q} containing
 #'   candidate covariates to screen. Column names are used in the output if
 #'   available.
+#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
+#'   \code{\link{CxtEBTD_missing}}. If supplied, \code{El} is extracted via
+#'   \code{normalize_factors(fit)$El} and no internal \code{CxtEBTD} call is
+#'   made. Either \code{fit} or \code{El} or neither (with \code{X} and
+#'   \code{K}) must be provided.
+#' @param El Numeric matrix of dimensions \code{n x K} (observation loading
+#'   matrix). If provided, used directly — no \code{CxtEBTD} fit is run and
+#'   \code{fit} is ignored.
 #' @param alpha Numeric significance level for covariate selection. Default
 #'   \code{0.05}.
 #' @param verbose Logical. If \code{TRUE}, prints progress and selected
 #'   covariates per rank. Default \code{TRUE}.
-#' @param ... Additional arguments passed to \code{\link{CxtEBTD}} for the
-#'   unsupervised fit (e.g., \code{init}, \code{maxiter}, \code{tol},
-#'   \code{convergence_criteria}).
+#' @param ... Additional arguments passed to \code{\link{CxtEBTD}} when
+#'   running the internal unsupervised fit (e.g., \code{init}, \code{maxiter},
+#'   \code{tol}, \code{convergence_criteria}). Ignored when \code{fit} or
+#'   \code{El} is supplied.
 #'
 #' @return A named list with:
 #' \describe{
 #'   \item{selected}{A list of length K. Each element is an integer vector of
-#'     column indices of \code{Xcov_candidates} whose coefficients are
+#'     column indices of \code{covariate_data} whose coefficients are
 #'     significant at level \code{alpha} for that component. Empty integer
 #'     vector if no covariates are significant.}
 #'   \item{summaries}{A list of length K. Each element is the \code{summary.lm}
-#'     object from the OLS regression of El[,k] on Xcov_candidates, giving
+#'     object from the OLS regression of El[,k] on \code{covariate_data}, giving
 #'     full coefficient estimates, standard errors, t-statistics, and p-values.}
 #'   \item{fit_unsupervised}{The fitted unsupervised \code{\link{CxtEBTD}}
-#'     object, in case the user wants to inspect the decomposition.}
+#'     object when the internal fit was run, the supplied \code{fit} object when
+#'     that was used, or \code{NULL} when \code{El} was provided directly.}
 #' }
 #'
 #' @details
-#' The unsupervised fit uses \code{Xcov = NULL} with all other arguments
-#' passed via \code{...}. The OLS regression for each component k is:
+#' When running the internal unsupervised fit, \code{Xcov = NULL} is used and
+#' all \code{...} arguments are forwarded to \code{\link{CxtEBTD}}. The OLS
+#' regression for each component k is:
 #' \deqn{E[l_{ik}] = X_{\text{cov}} \beta_k + \epsilon_{ik}}
 #' Covariates are selected if their two-sided p-value is below \code{alpha}.
 #' The intercept is included in the regression but is never selected as a
@@ -421,8 +436,17 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #' Xcov <- matrix(rnorm(100 * 5), nrow = 100)
 #' colnames(Xcov) <- paste0("cov", 1:5)
 #'
-#' result <- select_covariates(X, K = 3, Xcov_candidates = Xcov,
+#' # Style 1: internal unsupervised fit (original behaviour)
+#' result <- select_covariates(X, K = 3, covariate_data = Xcov,
 #'                              maxiter = 20, convergence_criteria = 'ELBO')
+#'
+#' # Style 2: supply a fitted object
+#' fit <- CxtEBTD(X, K = 3)
+#' result2 <- select_covariates(X, K = 3, covariate_data = Xcov, fit = fit)
+#'
+#' # Style 3: supply El directly
+#' nf <- normalize_factors(fit)
+#' result3 <- select_covariates(X, K = 3, covariate_data = Xcov, El = nf$El)
 #'
 #' # Which covariates were selected for each rank?
 #' result$selected
@@ -435,33 +459,45 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #' fit <- CxtEBTD(X, K = 3, Xcov = Xcov_selected)
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}
+#' @seealso \code{\link{CxtEBTD}}, \code{\link{normalize_factors}}
 #' @export
-select_covariates <- function(X, K, Xcov_candidates, alpha = 0.05,
-                               verbose = TRUE, ...) {
+select_covariates <- function(X, K, covariate_data, fit = NULL, El = NULL,
+                               alpha = 0.05, verbose = TRUE, ...) {
 
-  # Step 1: unsupervised decomposition
-  if (verbose) cat("Step 1: fitting unsupervised CxtEBTD (K =", K, ")...\n")
-  fit_unsup <- CxtEBTD(X, K = K, Xcov = NULL, ...)
-  El <- fit_unsup$res$ql$El  # n x K
+  # Resolve El
+  if (!is.null(El)) {
+    if (ncol(El) != K) {
+      stop(sprintf("'El' has %d columns but K = %d.", ncol(El), K))
+    }
+    fit_unsup <- NULL
+  } else if (!is.null(fit)) {
+    if (verbose) cat("Extracting El from fit via normalize_factors()...\n")
+    El        <- normalize_factors(fit)$El
+    fit_unsup <- fit
+  } else {
+    # Step 1: unsupervised decomposition
+    if (verbose) cat("Step 1: fitting unsupervised CxtEBTD (K =", K, ")...\n")
+    fit_unsup <- CxtEBTD(X, K = K, Xcov = NULL, ...)
+    El        <- fit_unsup$res$ql$El  # n x K
+  }
 
-  cov_names <- colnames(Xcov_candidates)
-  if (is.null(cov_names)) cov_names <- paste0("V", seq_len(ncol(Xcov_candidates)))
+  cov_names <- colnames(covariate_data)
+  if (is.null(cov_names)) cov_names <- paste0("V", seq_len(ncol(covariate_data)))
 
   selected_list <- vector("list", K)
   summary_list  <- vector("list", K)
 
-  # Step 2: OLS regression of El[,k] on Xcov_candidates for each component
+  # Step 2: OLS regression of El[,k] on covariate_data for each component
   for (k in seq_len(K)) {
     if (verbose) cat(sprintf("Step 2: screening covariates for rank %d...\n", k))
 
-    lm_fit  <- lm(El[, k] ~ Xcov_candidates)
+    lm_fit  <- lm(El[, k] ~ covariate_data)
     lm_summ <- summary(lm_fit)
 
     # p-values for all coefficients; row 1 is the intercept — skip it
     pvals <- lm_summ$coefficients[-1, 4]
 
-    # Selected: column indices (1-indexed into Xcov_candidates) where p < alpha
+    # Selected: column indices (1-indexed into covariate_data) where p < alpha
     selected_idx <- which(pvals < alpha)
 
     if (verbose) {
