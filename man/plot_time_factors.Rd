@@ -5,15 +5,19 @@
 \title{Plot Time-Mode Factors}
 \usage{
 plot_time_factors(
-  fit,
+  fit = NULL,
   ranks = NULL,
   time_labels = NULL,
   normalize = TRUE,
-  ncol = 1
+  ncol = 1,
+  Ef = NULL,
+  lambda = NULL,
+  xlim = NULL
 )
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}.}
+\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}. Either
+\code{fit} or \code{Ef} must be supplied.}
 
 \item{ranks}{Integer vector specifying which components to plot. Default
 \code{NULL} plots all K components.}
@@ -21,10 +25,22 @@ plot_time_factors(
 \item{time_labels}{Numeric vector of length \code{p} giving x-axis values
 (e.g., seconds, time indices). Default \code{NULL} uses \code{1:p}.}
 
-\item{normalize}{Logical. If \code{TRUE}, uses \code{\link{normalize_factors}}
-to normalize columns to unit norm. Default \code{TRUE}.}
+\item{normalize}{Logical. If \code{TRUE} and \code{fit} is supplied, uses
+\code{\link{normalize_factors}} to normalize columns to unit norm. Ignored
+when \code{Ef} is provided directly. Default \code{TRUE}.}
 
 \item{ncol}{Integer. Number of columns in the facet layout. Default \code{1}.}
+
+\item{Ef}{Numeric matrix of dimensions \code{p x K} (time factor matrix).
+If provided, used directly and \code{fit} is ignored.}
+
+\item{lambda}{Numeric vector of length \code{K} (component weights). Accepted
+for API symmetry when \code{Ef} is supplied directly; currently unused by
+this function.}
+
+\item{xlim}{Numeric vector of length 2 passed to
+\code{ggplot2::coord_cartesian(xlim = xlim)} to restrict the x-axis range.
+Default \code{NULL} applies no restriction.}
 }
 \value{
 A \code{ggplot} object.
@@ -39,6 +55,10 @@ panel per component. Useful for visualizing temporal patterns learned by
 fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
 plot_time_factors(fit)
 plot_time_factors(fit, ranks = c(1, 3), time_labels = seq(0, 600, length.out = 20))
+
+# Using raw factor matrices directly
+nf <- normalize_factors(fit)
+plot_time_factors(Ef = nf$Ef, lambda = nf$lambda)
 }
 
 }

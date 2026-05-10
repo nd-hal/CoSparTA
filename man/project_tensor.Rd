@@ -4,7 +4,14 @@
 \alias{project_tensor}
 \title{Project a New Tensor onto the Learned Factor Space}
 \usage{
-project_tensor(X_new, fit, normalize = TRUE)
+project_tensor(
+  X_new,
+  fit = NULL,
+  normalize = TRUE,
+  Ef = NULL,
+  Ew = NULL,
+  lambda = NULL
+)
 }
 \arguments{
 \item{X_new}{Either a 3D array of dimensions \code{n_new x p x w} (multiple
@@ -14,13 +21,25 @@ observation). In the latter case the input is wrapped as
 returned instead of a \code{1 x K} matrix.}
 
 \item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
-\code{\link{CxtEBTD_missing}}.}
+\code{\link{CxtEBTD_missing}}. Either \code{fit} or all of \code{Ef},
+\code{Ew}, and \code{lambda} must be supplied.}
 
-\item{normalize}{Logical. If \code{TRUE} (default), calls
-\code{\link{normalize_factors}} so that factor columns have unit
-Frobenius norm and are ordered by \eqn{\lambda} descending. If
-\code{FALSE}, uses raw posterior means \code{fit$res$qf$Ef} and
-\code{fit$res$qw$Ew} with no scaling or reordering.}
+\item{normalize}{Logical. If \code{TRUE} (default) and \code{fit} is
+supplied, calls \code{\link{normalize_factors}} so that factor columns have
+unit Frobenius norm and are ordered by \eqn{\lambda} descending. If
+\code{FALSE}, uses raw posterior means with no scaling or reordering.
+Ignored when \code{Ef}, \code{Ew}, and \code{lambda} are provided directly.}
+
+\item{Ef}{Numeric matrix of dimensions \code{p x K} (time factor matrix,
+unit-norm columns). Provide together with \code{Ew} and \code{lambda} to
+bypass the \code{fit} object.}
+
+\item{Ew}{Numeric matrix of dimensions \code{w x K} (channel factor matrix,
+unit-norm columns). Provide together with \code{Ef} and \code{lambda} to
+bypass the \code{fit} object.}
+
+\item{lambda}{Numeric vector of length \code{K} (component weights). Provide
+together with \code{Ef} and \code{Ew} to bypass the \code{fit} object.}
 }
 \value{
 If \code{X_new} is a 3D array: an \code{n_new x K} numeric matrix
@@ -28,14 +47,15 @@ If \code{X_new} is a 3D array: an \code{n_new x K} numeric matrix
   numeric vector of length \code{K}.
 }
 \description{
-Given a fitted \code{\link{CxtEBTD}} object, projects one or more new
-observations onto the learned factor space to produce a loading matrix.
-Each observation is a \code{p x w} count slice; the function recovers the
-\code{K}-dimensional representation without refitting.
+Given a fitted \code{\link{CxtEBTD}} object (or raw factor matrices),
+projects one or more new observations onto the learned factor space to
+produce a loading matrix. Each observation is a \code{p x w} count slice;
+the function recovers the \code{K}-dimensional representation without
+refitting.
 
 The projection for observation \eqn{i} and component \eqn{k} is:
 \deqn{F_{ik} = \lambda_k \, \mathbf{f}_k^\top X_{\text{new}[i,,]} \, \mathbf{w}_k}
-when \code{normalize = TRUE} (columns ordered by \eqn{\lambda} descending),
+when \code{normalize = TRUE} or raw matrices with \code{lambda} are supplied,
 or
 \deqn{F_{ik} = \mathbf{f}_k^\top X_{\text{new}[i,,]} \, \mathbf{w}_k}
 using the raw posterior means when \code{normalize = FALSE}.
@@ -58,6 +78,10 @@ l_one <- project_tensor(X_new[1, , ], fit)   # length-3 vector
 
 # Without normalization (raw posterior means, original component order)
 L_raw <- project_tensor(X_new, fit, normalize = FALSE)
+
+# Using raw factor matrices directly (already normalized)
+nf <- normalize_factors(fit)
+L_new2 <- project_tensor(X_new, Ef = nf$Ef, Ew = nf$Ew, lambda = nf$lambda)
 }
 
 }
