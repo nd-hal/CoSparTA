@@ -19,6 +19,8 @@ Imports:
   slam,
   dplyr,
   ggplot2,
+  ggh4x,
+  grid,
   Rcpp,
   methods
 LinkingTo:

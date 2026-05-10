@@ -39,6 +39,8 @@
 #'
 #' @seealso \code{\link{plot_channel_factors}}, \code{\link{normalize_factors}}
 #' @import ggplot2
+#' @importFrom ggh4x force_panelsizes
+#' @importFrom grid unit
 #' @export
 plot_time_factors <- function(fit = NULL, ranks = NULL, time_labels = NULL,
                                normalize = TRUE, ncol = 1,
@@ -57,33 +59,36 @@ plot_time_factors <- function(fit = NULL, ranks = NULL, time_labels = NULL,
     stop("Either 'fit' or 'Ef' must be provided.")
   }
 
-  p <- nrow(Ef)
+  n_time <- nrow(Ef)
   K <- ncol(Ef)
 
   if (is.null(ranks)) ranks <- seq_len(K)
   Ef <- Ef[, ranks, drop = FALSE]
+  K_plot <- length(ranks)
 
-  if (is.null(time_labels)) time_labels <- seq_len(p)
+  if (is.null(time_labels)) time_labels <- seq_len(n_time)
 
-  # Build long-format data frame
+  # Build long-format data frame with named columns for faceting
   df <- do.call(rbind, lapply(seq_along(ranks), function(j) {
     data.frame(
-      time  = time_labels,
-      value = Ef[, j],
-      rank  = factor(paste0("R", ranks[j]), levels = paste0("R", ranks))
+      time    = time_labels,
+      value   = Ef[, j],
+      factor  = factor(paste0("R", ranks[j]), levels = paste0("R", ranks)),
+      channel = "Time"
     )
   }))
 
-  p <- ggplot(df, aes(x = time, y = value, colour = rank)) +
+  plt <- ggplot(df, aes(x = time, y = value, col = factor)) +
     geom_line(size = 0.8) +
-    facet_wrap(~ rank, scales = "free_y", ncol = ncol) +
+    facet_grid(factor ~ channel, scales = "free_y") +
+    force_panelsizes(rows = unit(rep(0.89, K_plot), "cm"), TRUE) +
     xlab("Time") +
     ylab("Loading") +
     theme_minimal() +
     theme(legend.position = "none")
 
-  if (!is.null(xlim)) p <- p + coord_cartesian(xlim = xlim)
-  p
+  if (!is.null(xlim)) plt <- plt + coord_cartesian(xlim = xlim)
+  plt
 }
 
 
