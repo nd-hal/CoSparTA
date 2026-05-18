@@ -21,8 +21,7 @@ CxtEBTD(
   smooth_F = T,
   printevery = 10,
   verbose = TRUE,
-  adj_LF_scale = TRUE,
-  convergence_criteria = "mKLabs",
+  convergence_criteria = "factor_change",
   n_stable = 3L,
   U1_true = NULL,
   U2_true = NULL,
@@ -83,12 +82,12 @@ when \code{verbose = TRUE}. Default \code{10}.}
 \item{verbose}{Logical. If \code{TRUE}, prints initialization and iteration
 progress. Default \code{TRUE}.}
 
-\item{adj_LF_scale}{Logical. If \code{TRUE}, rescales L and F at each
-iteration to balance their column norms. Default \code{TRUE}.}
-
 \item{convergence_criteria}{Character string specifying the convergence
-criterion: \code{'mKLabs'} (mean KL divergence, default) or
-\code{'ELBO'} (evidence lower bound).}
+criterion: \code{'factor_change'} (maximum column-normalized change across
+all three factor matrices, default), \code{'mKLabs'} (mean KL divergence),
+or \code{'ELBO'} (evidence lower bound). \code{'factor_change'} is
+recommended: it avoids the O(npwK) ELBO computation and typically converges
+in fewer iterations.}
 
 \item{n_stable}{Integer. Number of consecutive iterations with factor change
 below \code{tol} required before declaring convergence. Only used when
@@ -106,11 +105,6 @@ evaluation. Default \code{NULL}.}
 \value{
 A named list with the following elements:
 \describe{
-  \item{EL}{Placeholder string; the observation-mode factor matrix is
-    accessible as \code{fit$res$ql$El} (dimensions \code{n x K}).}
-  \item{EF}{Placeholder string; the time-mode factor matrix is accessible
-    as \code{fit$res$qf$Ef} (dimensions \code{p x K}).}
-  \item{EF_smooth}{Smoothed time-mode factors (currently \code{NULL}).}
   \item{elbo}{Final ELBO value computed after the last iteration.}
   \item{obj_trace}{Numeric vector of objective values at each iteration.}
   \item{res}{List of variational posterior summaries. Key fields:

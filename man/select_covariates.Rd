@@ -5,7 +5,7 @@
 \title{Two-Step Covariate Selection via Unsupervised Decomposition}
 \usage{
 select_covariates(
-  X,
+  X = NULL,
   K,
   covariate_data,
   fit = NULL,

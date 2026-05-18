@@ -27,7 +27,8 @@ LinkingTo:
   Rcpp
 Suggests:
   clue,
-  reticulate
+  reticulate,
+  testthat
 Remotes:
   DongyueXie/ebpm,
   DongyueXie/smashrgen
