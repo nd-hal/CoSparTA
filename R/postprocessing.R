@@ -461,7 +461,7 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'
 #' @seealso \code{\link{CxtEBTD}}, \code{\link{normalize_factors}}
 #' @export
-select_covariates <- function(X, K, covariate_data, fit = NULL, El = NULL,
+select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL,
                                alpha = 0.05, verbose = TRUE, ...) {
 
   # Resolve El
@@ -491,7 +491,7 @@ select_covariates <- function(X, K, covariate_data, fit = NULL, El = NULL,
   for (k in seq_len(K)) {
     if (verbose) cat(sprintf("Step 2: screening covariates for rank %d...\n", k))
 
-    lm_fit  <- lm(El[, k] ~ covariate_data)
+    lm_fit  <- lm(El[, k] ~ ., data = as.data.frame(covariate_data))
     lm_summ <- summary(lm_fit)
 
     # p-values for all coefficients; row 1 is the intercept — skip it
