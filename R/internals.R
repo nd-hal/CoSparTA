@@ -9,7 +9,6 @@ ebpmf_identity_init = function(X,
   n = dim(X)[1]
   p = dim(X)[2]
   w = dim(X)[3]
-  # JC: p and w were switched and dropping last columns were wrong
   if(is.list(init)){
     # inital size need to match reduced X size
     L_init = init[[1]]
@@ -29,11 +28,6 @@ ebpmf_identity_init = function(X,
     }
   }
   # adjust scale of L and F, mainly for stability.
-  # here we need to change; for now maybe ignore?
-  #ratio = poisson_to_libsize(F_init,L_init,lib_size)
-  #L_init = ratio$L
-  #F_init = ratio$FF
-
   gl = list()
   gf = list()
   gw = list()

@@ -175,7 +175,6 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
       (digamma(alpha_est + x[nonzero_idx]) - log(beta_eff_i[nonzero_idx] + s[nonzero_idx]))
   }
 
-  #posterior <- data.frame(mean = mu_pm, mean_log = mu_log_pm)
   var_within <- (1 - pi_hat) * (alpha_est + x) / (beta_eff_i + s)^2
   var_between <- pi_hat * (1 - pi_hat) * ((alpha_est + x) / (beta_eff_i + s))^2
   mu_var <- var_within + var_between
@@ -197,9 +196,6 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
   type = "covariate_dependent")
 
   return(list(
-    #fitted_pi0 = pi0_est,
-    #fitted_alpha = alpha_est,
-    #fitted_beta = beta_est,
     #fitted_gamma = gamma_est,
     fitted_g = fitted_g,
     posterior = posterior,
@@ -289,7 +285,6 @@ transform_param_back_multiplier <- function(par, n_gamma) {
 #' @keywords internal
 # it is equivalent to dnbinom in R wiht log = T when X is integer; I allow  it  to compute when x is not integer
 dnbinom_cts_log_vec <- function(x, a, prob){
-  #browser()
   if(length(x) > 1 && length(a) == 1){a = replicate(length(x), a)}
   tmp = x*log(1-prob)
   tmp[x == 0] = 0 ## R says 0*-Inf = NaN

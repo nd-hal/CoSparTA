@@ -91,7 +91,6 @@ cat("\n===== Test A: Unsupervised (Xcov = NULL) =====\n")
 fit_A <- CxtEBTD(X_obs, K = 2, Xcov = NULL,
                  init                 = 'random_gamma',
                  maxiter              = 30,
-                 adj_LF_scale         = FALSE,
                  convergence_criteria = 'ELBO',
                  verbose              = TRUE)
 
@@ -122,7 +121,6 @@ cat("\n===== Test B: Supervised (Xcov supplied) =====\n")
 fit_B <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
                  init                 = 'random_gamma',
                  maxiter              = 30,
-                 adj_LF_scale         = FALSE,
                  convergence_criteria = 'ELBO',
                  verbose              = TRUE)
 
@@ -177,7 +175,6 @@ cat(sprintf("Missing entries: %d (%.1f%% of nonzeros)\n",
 fit_C <- CxtEBTD_missing(X = mask$X_obs, K = 2, obs_mask = mask$obs_mask, Xcov = X_cov,
                           init         = 'random_gamma',
                           maxiter      = 30,
-                          adj_LF_scale = FALSE,
                           verbose      = TRUE)
 
 norm_C    <- normalize_factors(fit_C)
@@ -195,7 +192,7 @@ cat("\n===== Test D: Rank-specific covariates =====\n")
 Xcov_list <- list(X_cov, NULL)
 fit_D <- CxtEBTD(X_obs, K = 2, Xcov = Xcov_list,
                  init = 'random_gamma', maxiter = 5,
-                 adj_LF_scale = FALSE, convergence_criteria = 'ELBO',
+                 convergence_criteria = 'ELBO',
                  verbose = TRUE)
 cat("Rank 1 gamma estimate:", fit_D$res$gl[[1]]$gamma, "\n")
 cat("Rank 1 fitted_g type:", fit_D$res$gl[[1]]$type, "\n")

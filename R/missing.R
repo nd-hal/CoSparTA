@@ -495,8 +495,6 @@ CxtEBTD_missing <- function(X, K, Xcov = NULL,
   }
 
   return(list(
-    EL           = "check res",
-    EF           = "check res",
     elbo         = elbo,
     obj_trace    = obj,
     res          = res,

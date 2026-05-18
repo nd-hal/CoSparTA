@@ -51,11 +51,12 @@
 #'   when \code{verbose = TRUE}. Default \code{10}.
 #' @param verbose Logical. If \code{TRUE}, prints initialization and iteration
 #'   progress. Default \code{TRUE}.
-#' @param adj_LF_scale Logical. If \code{TRUE}, rescales L and F at each
-#'   iteration to balance their column norms. Default \code{TRUE}.
 #' @param convergence_criteria Character string specifying the convergence
-#'   criterion: \code{'mKLabs'} (mean KL divergence, default) or
-#'   \code{'ELBO'} (evidence lower bound).
+#'   criterion: \code{'factor_change'} (maximum column-normalized change across
+#'   all three factor matrices, default), \code{'mKLabs'} (mean KL divergence),
+#'   or \code{'ELBO'} (evidence lower bound). \code{'factor_change'} is
+#'   recommended: it avoids the O(npwK) ELBO computation and typically converges
+#'   in fewer iterations.
 #' @param U1_true Optional matrix of true observation-mode factors, used to
 #'   track reconstruction error during simulation studies. Default \code{NULL}.
 #' @param U2_true Optional matrix of true time-mode factors for simulation
@@ -65,11 +66,6 @@
 #'
 #' @return A named list with the following elements:
 #' \describe{
-#'   \item{EL}{Placeholder string; the observation-mode factor matrix is
-#'     accessible as \code{fit$res$ql$El} (dimensions \code{n x K}).}
-#'   \item{EF}{Placeholder string; the time-mode factor matrix is accessible
-#'     as \code{fit$res$qf$Ef} (dimensions \code{p x K}).}
-#'   \item{EF_smooth}{Smoothed time-mode factors (currently \code{NULL}).}
 #'   \item{elbo}{Final ELBO value computed after the last iteration.}
 #'   \item{obj_trace}{Numeric vector of objective values at each iteration.}
 #'   \item{res}{List of variational posterior summaries. Key fields:
@@ -120,12 +116,10 @@ CxtEBTD = function(X,K,Xcov=NULL,
                                     #smooth_control=list(),
                                     printevery=10,
                                     verbose=TRUE,
-                                    adj_LF_scale = TRUE,
-                                    convergence_criteria = 'mKLabs',
+                                    convergence_criteria = 'factor_change',
                                     n_stable = 3L,
                                     U1_true=NULL, U2_true=NULL, U3_true=NULL){
 
-  # remove first/last hours / channels that are all 0, and are at the start or end of the matrices
   if (convergence_criteria == 'factor_change' && tol <= 1e-8) {
     tol <- 1e-6
   }
@@ -136,7 +130,6 @@ CxtEBTD = function(X,K,Xcov=NULL,
   p_original = dim(X)[2]
   w_original = dim(X)[3]
 
-  #browser()
   # X is n by p (time) by w (channel)
 
   # reduce dimension by droping 0s
@@ -151,7 +144,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
   p = dim(X)[2]
   w = dim(X)[3]
   n_points = n*p * w
-  ######## Xcov
+  # Xcov
   if (!is.null(Xcov)) {
     if (is.matrix(Xcov)) {
       Xcov <- rep(list(Xcov), K)
@@ -165,17 +158,12 @@ CxtEBTD = function(X,K,Xcov=NULL,
   }
 
   if(is.null(lib_size)){
-    lib_size = rep(1,n) # what is this?
+    lib_size = rep(1,n)
   }
 
-  #X = Matrix(X,sparse = T)
-  #x = summary(X)
-  #non0_idx = cbind(x$i,x$j) # i is first dim, j is second dim, x is value
-  # replace above with tensor functions
   x = rbind_sparse_matrix(X,reindex=T)
   non0_idx = cbind(x$V1,x$V2,x$V3)
 
-  #smooth_control = modifyList(ebpmf_identity_smooth_control_default(),smooth_control,keep.null = TRUE)
   if(length(ebpm.fn)==1){
     ebpm.fn.l = ebpm.fn
     ebpm.fn.f = ebpm.fn
@@ -185,7 +173,6 @@ CxtEBTD = function(X,K,Xcov=NULL,
     ebpm.fn.l = ebpm.fn[[1]]
     ebpm.fn.f = ebpm.fn[[2]]
     ebpm.fn.w = ebpm.fn[[3]]
-    #print(ebpm.fn.w)
   }
 
   # Normalize ebpm.fn.l to a length-K list
@@ -203,7 +190,6 @@ CxtEBTD = function(X,K,Xcov=NULL,
   }
 
   res = ebpmf_identity_init(X,K,init,maxiter_init,lib_size)
-  # what are we doing here? is alpha a scale?
   alpha = res$ql$Elogl[x$V1,,drop=F] + res$qf$Elogf[x$V2,,drop=F] + res$qw$Elogw[x$V3,,drop=F]
   exp_offset = matrixStats::rowMaxs(alpha)
   alpha = alpha - outer(exp_offset,rep(1,K),FUN='*')
@@ -214,8 +200,6 @@ CxtEBTD = function(X,K,Xcov=NULL,
   obj[1] = -Inf
 
   # list of difference in estimation and real value
-  #diff_U <- list(c(), c(), c())
-  # record diff_U for each K
   diff_U <- list(matrix(1000, nrow = maxiter, ncol=K),
                  matrix(1000, nrow = maxiter, ncol=K),
                  matrix(1000, nrow = maxiter, ncol=K))
@@ -232,9 +216,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
   Ew_prev <- NULL
   stable_count <- 0L
 
-  # ######################################
   for(iter in 1:maxiter){ # this is the update algo
-    #print(iter)
     El_prev <- res$ql$El
     Ef_prev <- res$qf$Ef
     Ew_prev <- res$qw$Ew
@@ -292,24 +274,16 @@ CxtEBTD = function(X,K,Xcov=NULL,
 
     # for now I only update this; maybe revisit others later
     if(convergence_criteria=='ELBO'){
-      #browser()
       obj[iter+1] = calc_stm_obj(x,n,p,w,K,res,non0_idx)
-      #print(obj)
-      print(obj[iter+1])
       if(is.infinite(obj[iter+1]) & obj[iter+1] < 0){
         res = res_prev
         break
       }
-      #print(obj[iter+1]-obj[iter])
-      if(verbose){
-        if(iter%%printevery==0){
-          print(sprintf('At iter %d, ELBO: %f',iter,obj[iter+1]))
-        }
+      if(verbose && iter%%printevery==0){
+        cat(sprintf('At iter %d, ELBO: %f',iter,obj[iter+1]))
+        cat('\n')
       }
-      # print("diff:")
-      # print((obj[iter+1]-obj[iter]))
       if((obj[iter+1]-obj[iter])/n_points<tol){ # we are maximizing elbo so not abs
-        #if(abs((obj[iter+1]-obj[iter])/n_points)<tol){ # why not abs?
         break
       }
     }
@@ -329,28 +303,13 @@ CxtEBTD = function(X,K,Xcov=NULL,
     if (!is.null(U1_true) && !is.null(U2_true) && !is.null(U3_true)) {
     U1 <- U1_true[,1]/norm(matrix(U1_true[,1]), type = "F")
     U1_hat_norm <- which_rank(U1, ret_EL)
-    #
     U2 <- U2_true[,1]/norm(matrix(U2_true[,1]), type = "F")
     U2_hat_norm <- which_rank(U2, ret_EF)
-    #
     U3 <- U3_true[,1]/norm(matrix(U3_true[,1]), type = "F")
     U3_hat_norm <- which_rank(U3, ret_EW)
-
-    # U1_hat_norm <- which_rank_modified(U1_true, ret_EL)
-    # U2_hat_norm <- which_rank_modified(U2_true, ret_EF)
-    # U3_hat_norm <- which_rank_modified(U3_true, ret_EW)
-    # for (k in 1:K) {
-    #   diff_U[[1]][iter, k] <- U1_hat_norm[[k]]$diff
-    #   diff_U[[2]][iter, k] <- U2_hat_norm[[k]]$diff
-    #   diff_U[[3]][iter, k] <- U3_hat_norm[[k]]$diff
-    # }
     diff_U[[1]] <- c(diff_U[[1]], U1_hat_norm$diff)
     diff_U[[2]] <- c(diff_U[[2]], U2_hat_norm$diff)
     diff_U[[3]] <- c(diff_U[[3]], U3_hat_norm$diff)
-
-    # plot(U2_hat_norm$u_hat_norm, col = "red")
-    # points(U2)
-
     if(iter%%printevery==0){
       print(sprintf('At iter %d, U1: %f',iter,U1_hat_norm$diff))
       print(sprintf('At iter %d, U2: %f',iter,U2_hat_norm$diff))
@@ -358,20 +317,6 @@ CxtEBTD = function(X,K,Xcov=NULL,
     }
     } # end if (!is.null(U1_true))
 
-    if(adj_LF_scale){ # we don't use it now; but likely will use it when K>1; this is like the lambda
-      gammaL = colSums(res$ql$El)
-      gammaF = colSums(res$qf$Ef)
-      gammaF = colSums(res$qf$Ef)
-      adjScale = sqrt(gammaL*gammaF)
-      sl = adjScale/gammaL
-      sf = adjScale/gammaF
-      res$ql$El = t(t(res$ql$El) * sl)
-      res$ql$Elogl = res$ql$Elogl + outer(rep(1,n),log(sl))
-      res$qf$Ef = t(t(res$qf$Ef) * sf)
-      res$qf$Ef_smooth = t(t(res$qf$Ef_smooth) * sf)
-      res$qf$Elogf = res$qf$Elogf + outer(rep(1,p),log(sf))
-      res$qf$Elogf_smooth = res$qf$Elogf_smooth + outer(rep(1,p),log(sf))
-    }
     res_prev = res
   }
   ## END FOR LOOP
@@ -387,22 +332,6 @@ CxtEBTD = function(X,K,Xcov=NULL,
   }
   elbo = calc_stm_obj(x,n,p,w,K,res,non0_idx)
 
-  ### We want to add this part later
-  #ldf = poisson_to_multinom(res$qf$Ef,res$ql$El)
-  #EL = ldf$L
-  #EF = ldf$FF
-  EF_smooth = NULL
-
-  # add: now we finished looping, we find for each U1/U2/U3, on each K, at which iter the diff is smallest
-  min_indices <- list()
-  # Find the index of the minimum value for each column in each matrix of diff_U
-  # for (i in 1:length(diff_U)) {
-  #   min_indices[[i]] <- find_min_index(diff_U[[i]])
-  # }
-  # best_EL <- extract_best_columns(ret_EL_list, min_indices[[1]])
-  # best_EF <- extract_best_columns(ret_EF_list, min_indices[[2]])
-  # best_EW <- extract_best_columns(ret_EW_list, min_indices[[3]])
-  #
   res$ql$El <- ret_EL
   res$qf$Ef <- ret_EF
   res$qw$Ew <- ret_EW
@@ -432,15 +361,7 @@ CxtEBTD = function(X,K,Xcov=NULL,
     tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$shape_post_w; res$qw$shape_post_w <- tmp
     tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$rate_post_w;  res$qw$rate_post_w  <- tmp
   }
-  #res$ql$El <- best_EL
-  # res$qf$Ef <- best_EF
-  # res$qw$Ew <- best_EW
-
-  fit = list(EL ="check res", # EL = EL,
-             EF ="check res", # EF = EF,
-             EF_smooth = EF_smooth,
-             elbo=elbo,
-             #d=ldf$s,
+  fit = list(elbo=elbo,
              obj_trace=obj,
              res = res,
              diff_U = diff_U,

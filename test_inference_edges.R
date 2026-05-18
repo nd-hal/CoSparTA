@@ -84,7 +84,7 @@ cat(sprintf("Observed sparsity: %.1f%% zeros\n", 100 * mean(X_obs == 0)))
 
 fit <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
                init = 'random_gamma', maxiter = 5,
-               adj_LF_scale = FALSE, convergence_criteria = 'ELBO',
+               convergence_criteria = 'ELBO',
                verbose = FALSE)
 
 # =============================================================================
@@ -174,7 +174,7 @@ cat("\n===== Test M: K=1 single component =====\n")
 
 fit_K1 <- CxtEBTD(X_obs, K = 1, Xcov = X_cov,
                   init = 'random_gamma', maxiter = 5,
-                  adj_LF_scale = FALSE, convergence_criteria = 'ELBO',
+                  convergence_criteria = 'ELBO',
                   verbose = FALSE)
 cat("El dimensions:", dim(fit_K1$res$ql$El), "\n")
 cat("Ef dimensions:", dim(fit_K1$res$qf$Ef), "\n")
@@ -197,7 +197,7 @@ fit_N <- CxtEBTD_missing(mask$X_obs, K = 2,
                           Xcov = list(X_cov, NULL),
                           obs_mask = mask$obs_mask,
                           init = 'random_gamma', maxiter = 5,
-                          adj_LF_scale = FALSE, verbose = FALSE)
+                          verbose = FALSE)
 cat("Rank 1 type:", fit_N$res$gl[[1]]$type, "\n")
 cat("Rank 2 type:", fit_N$res$gl[[2]]$type, "\n")
 miss_eval_N <- evaluate_missing_prediction(fit_N, mask)
