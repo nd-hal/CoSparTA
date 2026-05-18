@@ -63,12 +63,27 @@ normalize_factors <- function(fit) {
 
   ord <- order(lambda, decreasing = TRUE)
 
+  # Extract and reorder gamma coefficients if any component has them
+  gl        <- fit$res$gl
+  has_gamma <- !is.null(gl) &&
+    any(vapply(gl, function(g) !is.null(g$gamma), logical(1)))
+  if (has_gamma) {
+    gamma_list         <- lapply(seq_len(K), function(k) {
+      if (!is.null(gl[[k]]$gamma)) gl[[k]]$gamma else NA
+    })
+    gamma_list_ordered <- gamma_list[ord]
+  } else {
+    gamma_list_ordered <- NULL
+  }
+
   list(
-    El     = El[, ord, drop = FALSE],
-    Ef     = Ef[, ord, drop = FALSE],
-    Ew     = Ew[, ord, drop = FALSE],
-    lambda = lambda[ord],
-    order  = ord
+    El           = El[, ord, drop = FALSE],
+    Ef           = Ef[, ord, drop = FALSE],
+    Ew           = Ew[, ord, drop = FALSE],
+    lambda       = lambda[ord],
+    order        = ord,
+    lambda_order = ord,
+    gamma_list   = gamma_list_ordered
   )
 }
 
