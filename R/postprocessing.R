@@ -24,6 +24,14 @@
 #'     sorted descending.}
 #'   \item{order}{Integer vector of length \code{K} giving the permutation
 #'     of original component indices in new (descending \eqn{\lambda}) order.}
+#'   \item{gamma_list}{A list of length \code{K}. Each element is the gamma
+#'     coefficient vector for that component after reordering by descending
+#'     lambda. \code{NULL} if no components have gamma estimates (i.e. the
+#'     model was fit without covariates).}
+#'   \item{lambda_order}{Integer vector of length \code{K} giving the
+#'     permutation used to reorder components by descending lambda. Useful
+#'     for reordering other component-indexed objects (e.g. \code{Xcov_list})
+#'     to match the normalized factor ordering.}
 #' }
 #'
 #' @seealso \code{\link{CxtEBTD}}, \code{\link{project_tensor}},
