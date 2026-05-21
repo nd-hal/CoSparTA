@@ -24,6 +24,16 @@
 #'     \item{Numeric vector}{Explicit break points for \code{cut()}.
 #'       Must cover the full range of the \code{col} column.}
 #'   }
+#' @param row_levels Optional character or factor vector specifying the complete
+#'   set of levels for the row dimension (e.g. all session IDs). If \code{NULL},
+#'   levels are inferred from the data.
+#' @param col_levels Optional character or factor vector specifying the complete
+#'   set of levels for the column dimension (e.g. all time slots). If
+#'   \code{NULL}, levels are inferred from the data. Recommended for time
+#'   dimensions where empty slots should be preserved.
+#' @param slice_levels Optional character or factor vector specifying the
+#'   complete set of levels for the slice dimension (e.g. all
+#'   channels/websites). If \code{NULL}, levels are inferred from the data.
 #' @param fill Numeric. Value to fill for unobserved \code{(row, col, slice)}
 #'   combinations. Default \code{0L}.
 #'
@@ -90,12 +100,24 @@
 #'
 #' # Feed directly into CxtEBTD
 #' fit <- CxtEBTD(tensor_data$X, K = 3)
+#'
+#' # Ensure all 48 time slots are present even if some are empty
+#' tensor_out <- build_tensor(
+#'   data       = df,
+#'   user_col   = "session_id",
+#'   time_col   = "hour",
+#'   chan_col   = "website",
+#'   count_col  = "count",
+#'   col_levels = paste0("H", sprintf("%02d", 0:47))
+#' )
 #' }
 #'
 #' @seealso \code{\link{CxtEBTD}}
 #' @export
 build_tensor <- function(data, row, col, slice, value = NULL,
-                         time_bins = NULL, fill = 0L) {
+                         time_bins = NULL, fill = 0L,
+                         row_levels = NULL, col_levels = NULL,
+                         slice_levels = NULL) {
 
   # --- 1. Input validation ---
   if (!is.data.frame(data)) stop("'data' must be a data frame.")
@@ -141,12 +163,13 @@ build_tensor <- function(data, row, col, slice, value = NULL,
   }
 
   # --- 3. Factor levels to define the full universe ---
-  # row and slice: first-appearance order
-  d$r <- factor(d$r, levels = unique(d$r))
-  d$s <- factor(d$s, levels = unique(d$s))
+  d$r <- if (!is.null(row_levels))   factor(d$r, levels = row_levels)   else factor(d$r, levels = unique(d$r))
+  d$s <- if (!is.null(slice_levels)) factor(d$s, levels = slice_levels) else factor(d$s, levels = unique(d$s))
 
-  # col: keep cut() factor levels if binning was applied; otherwise sort
-  if (is.factor(d$c)) {
+  # col: user-supplied levels take priority; then cut() levels; otherwise sort
+  if (!is.null(col_levels)) {
+    d$c <- factor(d$c, levels = col_levels)
+  } else if (is.factor(d$c)) {
     # already has ordered levels (from cut() or original factor)
   } else {
     d$c <- factor(d$c, levels = sort(unique(d$c)))
@@ -182,6 +205,7 @@ build_tensor <- function(data, row, col, slice, value = NULL,
               n, p, w, 100 * mean(X == 0L)))
 
   list(
+    tensor      = X,
     X           = X,
     dim1_labels = dim1_labels,
     dim2_labels = dim2_labels,
