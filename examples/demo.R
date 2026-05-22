@@ -1,134 +1,193 @@
 # =============================================================================
-# CxtEBTD — end-to-end demo
-# Runs top-to-bottom; all objects are self-contained.
+# CxtEBTD — end-to-end pipeline demo
+# Demonstrates the full analysis workflow from raw event logs to inference.
+# Data files are in the data/ directory of this package.
 # =============================================================================
 
-devtools::load_all("~/Desktop/CxtEBTD")
+library(CxtEBTD)
+library(dplyr)
+library(readr)
+library(reticulate)
+library(ebpm)
+library(smashrgen)
+library(ggplot2)
+library(ggh4x)
 
 # =============================================================================
-# STEP 1: Simulate a tensor
-#
-# 500 observations x 100 time points x 50 channels, K = 4 components.
-# Two continuous covariates (no intercept column).
-# sparsity = 50 targets ~99 % zeros for a tensor of this size.
+# STEP 1: Build the tensor
 # =============================================================================
 
-n <- 500; p <- 100; w <- 50; K <- 4
+# Load raw data
+df             <- readRDS("data/demo_df.rds")
+cov_df         <- read.csv("data/demo_covariates.csv")
+channel_groups <- readRDS("data/demo_channel_groups.rds")
 
-# Two standardised continuous covariates
-set.seed(1)
-Xcov_demo <- cbind(rnorm(n), rnorm(n))
+# Covariate matrix
+Xcov_mat <- as.matrix(cov_df[, c("cov1", "cov2")])
 
-# Fixed covariate effects: one length-2 gamma vector per component
-gamma_demo <- list(
-  c( 0.6, -0.3),
-  c(-0.5,  0.4),
-  c( 0.3,  0.5),
-  c(-0.4, -0.2)
+# Reconstruct universe of labels
+session_ids   <- sort(unique(df$session_id))
+hour_labels   <- paste0("H", sprintf("%02d", 0:99))
+channel_names <- c("Retail", "Social", "Review", "Deal", "Search")
+website_names <- as.vector(
+  outer(channel_names, paste0("_", sprintf("%02d", 1:10)), paste0))
+
+# Build 1000 x 100 x 50 tensor
+tensor_out <- build_tensor(
+  data         = df,
+  row          = "session_id",
+  col          = "hour",
+  slice        = "website",
+  value        = "count",
+  row_levels   = session_ids,
+  col_levels   = hour_labels,
+  slice_levels = website_names
 )
+X <- tensor_out$X   # 1000 x 100 x 50 integer tensor
 
-sim <- simulate_tensor(
-  n         = n,
-  p         = p,
-  w         = w,
-  K         = K,
-  Xcov      = Xcov_demo,
-  gamma_true = gamma_demo,
-  sparsity  = 50,
-  seed      = 42
-)
-
-cat(sprintf("Observed sparsity: %.1f%% zeros\n", sim$sparsity_pct))
-
-X_obs <- sim$X
-Xcov  <- sim$Xcov      # pass this to the fitter
+cat("Dimensions:", dim(X), "\n")
+cat("Sparsity:  ", round(mean(X == 0), 4), "\n")
 
 # =============================================================================
-# STEP 2: Fit CxtEBTD
+# STEP 2: Fit the model
 # =============================================================================
 
+
+# Optional CP-APR warm-start
+# Requires a Python 3.9 virtual environment with pyCP_APR and numpy:
+#   python3.9 -m venv cxtebtd_env
+#   source cxtebtd_env/bin/activate        # Mac/Linux
+#   pip install pyCP_APR numpy
+init_vals <- init_cpapr(X, K = 4, virtualenv = "cxtebtd_env")
+
+# Supervised fit: shared covariate matrix across all factors
 fit <- CxtEBTD(
-  X                    = X_obs,
-  K                    = K,
-  Xcov                 = Xcov,
-  init                 = "random_gamma",
-  maxiter              = 50,
-  convergence_criteria = "factor_change",
+  X                    = X,
+  K                    = 4,
+  Xcov                 = Xcov_mat,
+  init                 = init_vals,  # or "random_gamma" if Python unavailable
+  maxiter              = 20,
+  convergence_criteria = "ELBO",
+  tol                  = 1e-6,
   verbose              = TRUE
 )
+# Key outputs:
+# fit$res$ql$El   -- 1000 x 4 posterior mean loadings (U1)
+# fit$res$qf$Ef   -- 100  x 4 time factors            (U2)
+# fit$res$qw$Ew   -- 50   x 4 channel weights         (U3)
+# fit$res$gl      -- list of K covariate coefficient vectors
 
-# =============================================================================
-# STEP 3: Normalize and visualize
-# =============================================================================
+# Rank-specific covariate list: both covariates, NULL, cov1 only, cov2 only
+Xcov_cov1 <- Xcov_mat[, 1, drop = FALSE]
+Xcov_cov2 <- Xcov_mat[, 2, drop = FALSE]
+fit_rankspec <- CxtEBTD(
+  X                    = X,
+  K                    = 4,
+  Xcov                 = list(Xcov_mat, NULL, Xcov_cov1, Xcov_cov2),
+  init                 = init_vals,
+  maxiter              = 20,
+  convergence_criteria = "ELBO",
+  tol                  = 1e-6,
+  verbose              = FALSE
+)
+cat("Rank-specific fit done\n")
 
-nf <- normalize_factors(fit)
-
-cat("\nComponent weights (lambda), descending:\n")
-print(round(nf$lambda, 4))
-
-# Time-factor plot (one line per component)
-p_time <- plot_time_factors(Ef = nf$Ef)
-print(p_time)
-
-# Channel-factor plot (one bar per channel)
-p_chan <- plot_channel_factors(Ew = nf$Ew)
-print(p_chan)
-
-# =============================================================================
-# STEP 4: Covariate inference (delta method)
-# =============================================================================
-
-cat("\n--- Covariate coefficient CIs (delta method) ---\n")
-gamma_ci <- get_gamma_ci(fit, method = "delta", level = 0.95)
-
-for (k in seq_len(K)) {
-  ci <- gamma_ci[[k]]
-  if (is.null(ci)) {
-    cat(sprintf("Factor %d: unsupervised (no gamma)\n", k))
-  } else {
-    cat(sprintf("\nFactor %d:\n", k))
-    print(data.frame(
-      estimate = round(ci$estimate, 4),
-      se       = round(ci$se,       4),
-      lower    = round(ci$lower,    4),
-      upper    = round(ci$upper,    4),
-      pvalue   = signif(ci$pvalue,  3)
-    ))
-  }
-}
-
-# =============================================================================
-# STEP 5: Uncertainty quantification (L-mode credible intervals)
-# =============================================================================
-
-cat("\n--- L-mode 95% credible intervals ---\n")
-ci_L <- get_credible_interval(fit, mode = "L", level = 0.95)
-cat(sprintf("lower range: [%.4f, %.4f]\n", min(ci_L$lower, na.rm = TRUE),
-                                             max(ci_L$lower, na.rm = TRUE)))
-cat(sprintf("upper range: [%.4f, %.4f]\n", min(ci_L$upper, na.rm = TRUE),
-                                             max(ci_L$upper, na.rm = TRUE)))
-
-# =============================================================================
-# STEP 6: Missing data
-# =============================================================================
-
-cat("\n--- Missing data ---\n")
-mask <- generate_missing_mask(X_obs, missing_rate = 0.10, seed = 42)
-
+# Missing data handling
+mask     <- generate_missing_mask(X, missing_rate = 0.10)
 fit_miss <- CxtEBTD_missing(
-  X                    = mask$X_obs,
-  K                    = K,
-  Xcov                 = Xcov,
+  X                    = X,
+  K                    = 4,
+  Xcov                 = Xcov_mat,
   obs_mask             = mask$obs_mask,
-  init                 = "random_gamma",
-  maxiter              = 50,
-  convergence_criteria = "factor_change",
-  verbose              = TRUE
+  maxiter              = 20,
+  convergence_criteria = "ELBO",
+  tol                  = 1e-6,
+  verbose              = FALSE
+)
+cat("Missing data fit done\n")
+
+# =============================================================================
+# STEP 3: Uncertainty quantification
+# =============================================================================
+
+# Exact 95% posterior credible intervals for channel mode (U3)
+ci_w <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "W")
+# ci_w$q2.5  -- 50 x 4 lower bounds
+# ci_w$q97.5 -- 50 x 4 upper bounds
+cat("Channel mode 95% CI computed for",
+    nrow(ci_w$q2.5), "websites across",
+    ncol(ci_w$q2.5), "factors\n")
+
+# Exact 95% posterior credible intervals for observation mode (U1)
+ci_l <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "L")
+# ci_l$q2.5  -- 1000 x 4 lower bounds
+# ci_l$q97.5 -- 1000 x 4 upper bounds
+cat("Session mode 95% CI computed for",
+    nrow(ci_l$q2.5), "sessions across",
+    ncol(ci_l$q2.5), "factors\n")
+
+# Delta-method CIs for covariate coefficients
+ci_gamma <- get_gamma_ci(fit, method = "delta", level = 0.95)
+print(ci_gamma[[1]])   # factor 1 results
+
+# =============================================================================
+# STEP 4: Covariate screening
+# =============================================================================
+
+# Fit covariate-free model
+fit_unsup <- CxtEBTD(
+  X                    = X,
+  K                    = 4,
+  Xcov                 = NULL,
+  init                 = init_vals,
+  maxiter              = 20,
+  convergence_criteria = "ELBO",
+  tol                  = 1e-6,
+  verbose              = FALSE
 )
 
-cat("\nMissing-data fit factor dimensions:\n")
-cat(sprintf("  El: %d x %d\n", nrow(fit_miss$res$ql$El), ncol(fit_miss$res$ql$El)))
-cat(sprintf("  Ef: %d x %d\n", nrow(fit_miss$res$qf$Ef), ncol(fit_miss$res$qf$Ef)))
-cat(sprintf("  Ew: %d x %d\n", nrow(fit_miss$res$qw$Ew), ncol(fit_miss$res$qw$Ew)))
+# Normalize and screen covariates
+nf_unsup <- normalize_factors(fit_unsup)
+sel <- select_covariates(
+  K              = 4,
+  covariate_data = as.data.frame(Xcov_mat),
+  El             = nf_unsup$El
+)
+print(sel$selected)
+
+# =============================================================================
+# STEP 5: Post-processing
+# =============================================================================
+
+# Normalize to unit norm, sort by weight lambda
+nf <- normalize_factors(fit)
+cat("Lambda (weights):", round(nf$lambda, 3), "\n")
+
+# Project new observations onto the factor space (no refit)
+X_new <- X[991:1000, , ]   # held-out sessions for illustration
+F_new <- project_tensor(X_new, fit)
+cat("Projection dimensions:", dim(F_new), "\n")
+
+# Reconstruct the denoised Poisson mean tensor
+X_hat <- reconstruct_tensor(fit)
+cat("Reconstruction dimensions:", dim(X_hat), "\n")
+cat("Any negative values:      ", any(X_hat < 0), "\n")
+
+# =============================================================================
+# STEP 6: Visualization
+# =============================================================================
+
+# Faceted line plot of K time factors
+plot_time_factors(
+  Ef          = nf$Ef,
+  time_labels = 1:100
+)
+
+# Faceted bar plot of K channel factors with category grouping
+plot_channel_factors(
+  Ew             = nf$Ew,
+  channel_names  = website_names,
+  channel_groups = channel_groups
+)
 
 cat("\nDemo complete.\n")
