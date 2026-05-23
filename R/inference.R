@@ -336,11 +336,16 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'
 #' \describe{
 #'   \item{\code{"delta"}}{Fast asymptotic intervals based on the Hessian of
-#'     the marginal log-likelihood from the EBPM optimization. These are
-#'     \strong{conditional} standard errors -- they measure uncertainty in
-#'     \eqn{\gamma} given the current F and W estimates, and may
-#'     underestimate the true uncertainty. Recommended for exploratory
-#'     screening.}
+#'     the marginal log-likelihood from the EBPM optimization. The full
+#'     Hessian (covering \eqn{\gamma} together with nuisance parameters
+#'     \eqn{\pi_0}, \eqn{\alpha}, \eqn{\beta}) is inverted first, and then
+#'     the \eqn{\gamma} submatrix is extracted, implementing
+#'     \eqn{\mathrm{Var}(\hat\gamma_k) = [H_k^{-1}]_{\gamma,\gamma}} per
+#'     equation (21) of the paper. This correctly accounts for uncertainty in
+#'     the nuisance parameters. These are \strong{conditional} standard errors
+#'     -- they measure uncertainty in \eqn{\gamma} given the current F and W
+#'     estimates, and may underestimate the true uncertainty. Recommended for
+#'     exploratory screening.}
 #'   \item{\code{"bootstrap"}}{Parametric bootstrap intervals. Generates
 #'     \code{B} synthetic tensors from the fitted Poisson rates, refits
 #'     \code{\link{CxtEBTD}} on each, and collects the bootstrap distribution
@@ -436,19 +441,20 @@ get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
              "Refit the model with the current package version.")
       }
 
-      # gamma parameters are at positions 4:(3+q) in the full Hessian
-      # (positions 1-3 are logit_pi0, log_alpha, log_beta)
-      H_gamma <- hessian[4:(3 + q), 4:(3 + q), drop = FALSE]
-
-      vcov_gamma <- tryCatch(
-        solve(H_gamma),
-        error = function(e) {
-          warning(sprintf("Hessian inversion failed for component %d: %s. ",
-                          k, conditionMessage(e)),
-                  "Standard errors set to NA.")
-          NULL
-        }
-      )
+      # Invert the full Hessian first, then extract the gamma submatrix.
+      # This implements Var(gamma_hat_k) = [H_k^{-1}]_{gamma,gamma} per
+      # eq(21), correctly propagating uncertainty from nuisance parameters
+      # (positions 1-3: logit_pi0, log_alpha, log_beta).
+      gamma_idx  <- 4:(3 + q)
+      vcov_gamma <- tryCatch({
+        V_full <- solve(hessian)
+        V_full[gamma_idx, gamma_idx, drop = FALSE]
+      }, error = function(e) {
+        warning(sprintf("Hessian inversion failed for component %d: %s. ",
+                        k, conditionMessage(e)),
+                "Standard errors set to NA.")
+        NULL
+      })
 
       if (is.null(vcov_gamma)) {
         se <- rep(NA_real_, q)
