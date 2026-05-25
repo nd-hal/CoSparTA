@@ -73,130 +73,6 @@ get_pip <- function(fit, mode = 'L', threshold = NULL, normalized = TRUE) {
 }
 
 
-#' Compute Credible Intervals from a CoSparTA fit
-#'
-#' @description
-#' Computes approximate credible intervals for factor elements using the
-#' posterior mean and variance stored in a fitted \code{\link{CoSparTA}}
-#' object. Intervals are computed under a normal approximation to the
-#' posterior, which is reasonable for elements with non-negligible PIP.
-#' For elements with low PIP (likely zero), intervals should be interpreted
-#' cautiously.
-#'
-#' @param fit A fitted object returned by \code{\link{CoSparTA}}.
-#' @param mode Character string specifying which mode to extract:
-#'   \code{'L'} for observation loadings, \code{'F'} for time factors,
-#'   \code{'W'} for channel weights. Default \code{'L'}.
-#' @param level Numeric credible level in \code{(0, 1)}. Default \code{0.95}
-#'   for 95\% credible intervals.
-#' @param normalized Logical. If \code{TRUE} (default), reads from the
-#'   \code{_normed} fields (unit-norm columns, descending \eqn{\lambda}
-#'   order), computing variance from \code{shape_post_*_normed} and
-#'   \code{rate_post_*_normed}. If \code{FALSE}, reads from raw fields and
-#'   uses \code{Varl}/\code{Varf}/\code{Varw} directly.
-#'
-#' @return A list with three matrices of the same dimensions as the
-#'   corresponding factor matrix:
-#' \describe{
-#'   \item{mean}{Posterior mean matrix.}
-#'   \item{lower}{Lower bound of the credible interval.}
-#'   \item{upper}{Upper bound of the credible interval.}
-#' }
-#' Returns \code{NULL} with a warning if posterior variance is not available
-#' for the requested mode.
-#'
-#' @examples
-#' \dontrun{
-#' fit <- CoSparTA(X, K = 3, Xcov = Xcov)
-#'
-#' # 95% credible intervals for observation loadings
-#' ci_L <- get_credible_interval(fit, mode = 'L', level = 0.95)
-#' ci_L$mean    # posterior means
-#' ci_L$lower   # lower bounds
-#' ci_L$upper   # upper bounds
-#'
-#' # 90% credible intervals for channel weights
-#' ci_W <- get_credible_interval(fit, mode = 'W', level = 0.90)
-#' }
-#'
-#' @export
-get_credible_interval <- function(fit, mode = 'L', level = 0.95,
-                                   normalized = TRUE) {
-
-  if (level <= 0 || level >= 1) {
-    stop("level must be between 0 and 1")
-  }
-
-  if (normalized) {
-    mean_mat  <- switch(mode,
-      'L' = fit$res$ql$El_normed,
-      'F' = fit$res$qf$Ef_normed,
-      'W' = fit$res$qw$Ew_normed,
-      stop("mode must be one of 'L', 'F', or 'W'")
-    )
-    shape_mat <- switch(mode,
-      'L' = fit$res$ql$shape_post_l_normed,
-      'F' = fit$res$qf$shape_post_f_normed,
-      'W' = fit$res$qw$shape_post_w_normed
-    )
-    rate_mat  <- switch(mode,
-      'L' = fit$res$ql$rate_post_l_normed,
-      'F' = fit$res$qf$rate_post_f_normed,
-      'W' = fit$res$qw$rate_post_w_normed
-    )
-    pip_mat   <- switch(mode,
-      'L' = fit$res$ql$PIPl_normed,
-      'F' = fit$res$qf$PIPf_normed,
-      'W' = fit$res$qw$PIPw_normed
-    )
-    if (is.null(shape_mat) || all(is.na(shape_mat))) {
-      # Fall back to raw posterior variance for modes that have no spike
-      # component (e.g. F mode with smooth prior stores Varf but not shape_post)
-      var_mat <- switch(mode,
-        'L' = fit$res$ql$Varl,
-        'F' = fit$res$qf$Varf,
-        'W' = fit$res$qw$Varw
-      )
-      if (is.null(var_mat) || all(is.na(var_mat))) {
-        warning(paste("Posterior variance not available for mode", mode,
-                      "-- credible intervals cannot be computed."))
-        return(NULL)
-      }
-    } else {
-      # Law of total variance: pip*shape/rate^2 + pip*(1-pip)*(shape/rate)^2
-      slab_mean <- shape_mat / rate_mat
-      var_mat   <- pip_mat * shape_mat / rate_mat^2 +
-                   slab_mean^2 * pip_mat * (1 - pip_mat)
-    }
-  } else {
-    mean_mat <- switch(mode,
-      'L' = fit$res$ql$El,
-      'F' = fit$res$qf$Ef,
-      'W' = fit$res$qw$Ew,
-      stop("mode must be one of 'L', 'F', or 'W'")
-    )
-    var_mat <- switch(mode,
-      'L' = fit$res$ql$Varl,
-      'F' = fit$res$qf$Varf,
-      'W' = fit$res$qw$Varw
-    )
-    if (is.null(var_mat) || all(is.na(var_mat))) {
-      warning(paste("Posterior variance not available for mode", mode,
-                    "-- credible intervals cannot be computed."))
-      return(NULL)
-    }
-  }
-
-  z <- qnorm((1 + level) / 2)
-  sd_mat <- sqrt(pmax(var_mat, 0))
-
-  return(list(
-    mean  = mean_mat,
-    lower = pmax(0, mean_mat - z * sd_mat),
-    upper = mean_mat + z * sd_mat
-  ))
-}
-
 #' Identify Significant Channels and Time Points per Factor via lFDR Control
 #'
 #' @description
@@ -326,7 +202,7 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both',
 #'   are formatted as \code{paste0("q", round(probs * 100, 1))}, e.g.
 #'   \code{"q2.5"} and \code{"q97.5"} for the default \code{probs}.
 #'
-#' @seealso \code{\link{get_credible_interval}}, \code{\link{get_pip}}
+#' @seealso \code{\link{get_pip}}
 #'
 #' @examples
 #' \dontrun{

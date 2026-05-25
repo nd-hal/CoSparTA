@@ -18,15 +18,6 @@ test_that("I: get_pip returns correct structure and respects threshold", {
   expect_true(is.null(pip_F))
 })
 
-test_that("J: credible intervals are ordered lower <= mean <= upper", {
-  ci_L <- get_credible_interval(fit, mode = 'L', level = 0.95)
-  expect_true(all(ci_L$lower <= ci_L$mean, na.rm = TRUE))
-  expect_true(all(ci_L$mean <= ci_L$upper, na.rm = TRUE))
-  ci_W <- get_credible_interval(fit, mode = 'W', level = 0.90)
-  expect_true(all(ci_W$lower <= ci_W$upper, na.rm = TRUE))
-  ci_F <- get_credible_interval(fit, mode = 'F')
-  expect_false(is.null(ci_F))  # F-mode CIs are available even without a spike prior
-})
 
 test_that("K: get_significant_patterns returns one entry per factor", {
   patterns <- get_significant_patterns(fit, alpha = 0.05, mode = 'both')

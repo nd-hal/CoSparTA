@@ -61,5 +61,5 @@ q_W$q50
 
 }
 \seealso{
-\code{\link{get_credible_interval}}, \code{\link{get_pip}}
+\code{\link{get_pip}}
 }
