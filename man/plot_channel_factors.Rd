@@ -29,9 +29,11 @@ channel names. Default \code{NULL}.}
 for each channel (e.g., \code{c(rep("TextEmo", 5), rep("Gaze", 25))}). When
 supplied, channels are grouped into facet columns. Default \code{NULL}.}
 
-\item{normalize}{Logical. If \code{TRUE} and \code{fit} is supplied, uses
-\code{\link{normalize_factors}} to normalize columns to unit norm. Ignored
-when \code{Ew} is provided directly. Default \code{TRUE}.}
+\item{normalize}{Logical. If \code{TRUE} (default) and \code{fit} is
+supplied, reads \code{fit$res$qw$Ew_normed} (unit-norm, descending
+\eqn{\lambda} order). Falls back to \code{\link{normalize_factors}} for
+legacy fits that lack \code{_normed} fields. Ignored when \code{Ew} is
+provided directly.}
 
 \item{show_names}{Logical. If \code{TRUE} and \code{channel_names} is supplied,
 shows individual channel names on the x-axis. Default \code{FALSE}.}

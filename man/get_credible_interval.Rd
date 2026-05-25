@@ -4,7 +4,7 @@
 \alias{get_credible_interval}
 \title{Compute Credible Intervals from a CoSparTA fit}
 \usage{
-get_credible_interval(fit, mode = "L", level = 0.95)
+get_credible_interval(fit, mode = "L", level = 0.95, normalized = TRUE)
 }
 \arguments{
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
@@ -15,6 +15,12 @@ get_credible_interval(fit, mode = "L", level = 0.95)
 
 \item{level}{Numeric credible level in \code{(0, 1)}. Default \code{0.95}
 for 95\% credible intervals.}
+
+\item{normalized}{Logical. If \code{TRUE} (default), reads from the
+\code{_normed} fields (unit-norm columns, descending \eqn{\lambda}
+order), computing variance from \code{shape_post_*_normed} and
+\code{rate_post_*_normed}. If \code{FALSE}, reads from raw fields and
+uses \code{Varl}/\code{Varf}/\code{Varw} directly.}
 }
 \value{
 A list with three matrices of the same dimensions as the

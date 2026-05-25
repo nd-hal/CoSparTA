@@ -41,6 +41,11 @@ weight \eqn{\lambda_k = \|\mathbf{l}_k\| \|\mathbf{f}_k\| \|\mathbf{w}_k\|},
 and returns components sorted by \eqn{\lambda} descending. This is the
 canonical form for comparing decompositions and for downstream use with
 \code{project_tensor} and \code{reconstruct_tensor}.
+
+Since \code{\link{CoSparTA}} now produces normalized outputs directly in
+\code{_normed} fields (e.g. \code{fit$res$ql$El_normed}), this function is
+primarily useful for legacy code or custom normalization workflows applied
+to fit objects that lack those fields.
 }
 \examples{
 \dontrun{

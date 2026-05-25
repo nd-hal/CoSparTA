@@ -123,6 +123,26 @@ A named list with the following elements:
     Only meaningful when true factors are supplied.}
   \item{run_time}{Elapsed computation time as a \code{difftime} object.}
 }
+In addition, the following normalized and reordered fields are populated
+automatically (columns scaled to unit Frobenius norm, ordered by descending
+\eqn{\lambda}):
+\describe{
+  \item{res$lambda_normed}{Numeric vector of length \code{K}: component
+    weights \eqn{\lambda_k = \|l_k\|\|f_k\|\|w_k\|}, sorted descending.}
+  \item{res$gl_normed}{List of K gamma estimates reordered by descending
+    \eqn{\lambda}.}
+  \item{res$ql$El_normed}{Unit-norm observation loading matrix
+    (\code{n x K}), reordered by descending \eqn{\lambda}.}
+  \item{res$ql$PIPl_normed}{PIP matrix for L mode, reordered.}
+  \item{res$ql$shape_post_l_normed}{Posterior gamma shape for L, reordered.}
+  \item{res$ql$rate_post_l_normed}{Posterior gamma rate for L scaled by
+    \eqn{\|l_k\|}, reordered, so that \eqn{El\_normed[i,k] \sim
+    \text{Gamma}(\text{shape},\, \text{rate\_normed})} marginally.}
+  \item{res$qf$Ef_normed, res$qf$PIPf_normed, res$qf$shape_post_f_normed,
+    res$qf$rate_post_f_normed}{Same pattern for the F mode.}
+  \item{res$qw$Ew_normed, res$qw$PIPw_normed, res$qw$shape_post_w_normed,
+    res$qw$rate_post_w_normed}{Same pattern for the W mode.}
+}
 }
 \description{
 Fits a non-negative CP tensor decomposition using empirical Bayes priors with

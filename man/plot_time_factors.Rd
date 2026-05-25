@@ -25,9 +25,11 @@ plot_time_factors(
 \item{time_labels}{Numeric vector of length \code{p} giving x-axis values
 (e.g., seconds, time indices). Default \code{NULL} uses \code{1:p}.}
 
-\item{normalize}{Logical. If \code{TRUE} and \code{fit} is supplied, uses
-\code{\link{normalize_factors}} to normalize columns to unit norm. Ignored
-when \code{Ef} is provided directly. Default \code{TRUE}.}
+\item{normalize}{Logical. If \code{TRUE} (default) and \code{fit} is
+supplied, reads \code{fit$res$qf$Ef_normed} (unit-norm, descending
+\eqn{\lambda} order). Falls back to \code{\link{normalize_factors}} for
+legacy fits that lack \code{_normed} fields. Ignored when \code{Ef} is
+provided directly.}
 
 \item{ncol}{Integer. Number of columns in the facet layout. Default \code{1}.}
 

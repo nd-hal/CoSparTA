@@ -91,7 +91,8 @@ below \code{tol} required before declaring convergence. Only used when
 \item{U3_true}{Optional true W matrix for simulation evaluation.}
 }
 \value{
-Same structure as \code{\link{CoSparTA}} with one additional field:
+Same structure as \code{\link{CoSparTA}} (including all
+\code{_normed} fields) with one additional field:
 \describe{
   \item{obs_structure}{Internal observation structure used during fitting,
     required by \code{\link{evaluate_missing_prediction}}.}

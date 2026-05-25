@@ -98,3 +98,63 @@ test_that("H: reconstruct_tensor returns non-negative array of correct size", {
   expect_equal(dim(recon), c(n, p, w))
   expect_true(all(recon >= 0))
 })
+
+test_that("I2: _normed fields exist, have unit-norm columns, and raw fields are unchanged", {
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
+                   init = 'random_gamma', maxiter = 30,
+                   convergence_criteria = 'factor_change', verbose = FALSE)
+
+  # raw El still present and unmodified (columns NOT unit-norm in general)
+  expect_false(is.null(fit_B$res$ql$El))
+  expect_equal(dim(fit_B$res$ql$El), c(n, K))
+
+  # _normed fields present
+  expect_false(is.null(fit_B$res$ql$El_normed))
+  expect_false(is.null(fit_B$res$qf$Ef_normed))
+  expect_false(is.null(fit_B$res$qw$Ew_normed))
+  expect_false(is.null(fit_B$res$lambda_normed))
+  expect_false(is.null(fit_B$res$gl_normed))
+
+  # El_normed columns have unit Frobenius norm
+  col_norms_l <- sqrt(colSums(fit_B$res$ql$El_normed^2, na.rm = TRUE))
+  expect_true(all(abs(col_norms_l - 1) < 1e-10))
+
+  # lambda_normed is descending
+  expect_true(all(diff(fit_B$res$lambda_normed) <= 0))
+
+  # raw El unchanged: lambda_normed = colnorm(El)*colnorm(Ef)*colnorm(Ew), perm applied
+  nl_raw <- sqrt(colSums(fit_B$res$ql$El^2, na.rm = TRUE))
+  nf_raw <- sqrt(colSums(fit_B$res$qf$Ef^2, na.rm = TRUE))
+  nw_raw <- sqrt(colSums(fit_B$res$qw$Ew^2, na.rm = TRUE))
+  lambda_unsorted <- nl_raw * nf_raw * nw_raw
+  perm <- order(lambda_unsorted, decreasing = TRUE)
+  expect_equal(fit_B$res$lambda_normed, lambda_unsorted[perm], tolerance = 1e-10)
+
+  # shape/rate/PIP normed fields present when raw exist
+  expect_false(is.null(fit_B$res$ql$PIPl_normed))
+  expect_false(is.null(fit_B$res$ql$shape_post_l_normed))
+  expect_false(is.null(fit_B$res$ql$rate_post_l_normed))
+})
+
+test_that("I3: get_posterior_quantile uses _normed by default; normalized=FALSE uses raw", {
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
+                   init = 'random_gamma', maxiter = 30,
+                   convergence_criteria = 'factor_change', verbose = FALSE)
+
+  q_normed <- get_posterior_quantile(fit_B, probs = c(0.025, 0.975),
+                                      mode = 'L', normalized = TRUE)
+  q_raw    <- get_posterior_quantile(fit_B, probs = c(0.025, 0.975),
+                                      mode = 'L', normalized = FALSE)
+
+  # Both return valid quantile matrices of correct dimension
+  expect_equal(dim(q_normed$q2.5), c(n, K))
+  expect_equal(dim(q_raw$q2.5),    c(n, K))
+
+  # Normalized and raw use different column orderings / scales — outputs differ
+  # (unless by coincidence the factor order is identical, but values scale differently)
+  nl <- sqrt(colSums(fit_B$res$ql$El^2, na.rm = TRUE))
+  # If max norm > 1, normalized CIs should be smaller (divided by nl)
+  if (any(nl > 1.01)) {
+    expect_false(isTRUE(all.equal(q_normed$q97.5, q_raw$q97.5)))
+  }
+})

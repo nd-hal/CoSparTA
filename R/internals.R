@@ -1,4 +1,50 @@
 #' @keywords internal
+.add_normed_fields <- function(res) {
+  El <- res$ql$El
+  Ef <- res$qf$Ef
+  Ew <- res$qw$Ew
+  K  <- ncol(El)
+
+  nl <- sqrt(colSums(El^2, na.rm = TRUE)); nl[nl == 0] <- 1
+  nf <- sqrt(colSums(Ef^2, na.rm = TRUE)); nf[nf == 0] <- 1
+  nw <- sqrt(colSums(Ew^2, na.rm = TRUE)); nw[nw == 0] <- 1
+
+  lambda_unsorted <- nl * nf * nw
+  perm <- order(lambda_unsorted, decreasing = TRUE)
+  res$lambda_normed <- lambda_unsorted[perm]
+  res$gl_normed     <- res$gl[perm]
+
+  # Mode 1 (L)
+  res$ql$El_normed <- sweep(El, 2, nl, "/")[, perm, drop = FALSE]
+  if (!is.null(res$ql$PIPl))
+    res$ql$PIPl_normed <- res$ql$PIPl[, perm, drop = FALSE]
+  if (!is.null(res$ql$shape_post_l)) {
+    res$ql$shape_post_l_normed <- res$ql$shape_post_l[, perm, drop = FALSE]
+    res$ql$rate_post_l_normed  <- sweep(res$ql$rate_post_l, 2, nl, "*")[, perm, drop = FALSE]
+  }
+
+  # Mode 2 (F)
+  res$qf$Ef_normed <- sweep(Ef, 2, nf, "/")[, perm, drop = FALSE]
+  if (!is.null(res$qf$PIPf))
+    res$qf$PIPf_normed <- res$qf$PIPf[, perm, drop = FALSE]
+  if (!is.null(res$qf$shape_post_f)) {
+    res$qf$shape_post_f_normed <- res$qf$shape_post_f[, perm, drop = FALSE]
+    res$qf$rate_post_f_normed  <- sweep(res$qf$rate_post_f, 2, nf, "*")[, perm, drop = FALSE]
+  }
+
+  # Mode 3 (W)
+  res$qw$Ew_normed <- sweep(Ew, 2, nw, "/")[, perm, drop = FALSE]
+  if (!is.null(res$qw$PIPw))
+    res$qw$PIPw_normed <- res$qw$PIPw[, perm, drop = FALSE]
+  if (!is.null(res$qw$shape_post_w)) {
+    res$qw$shape_post_w_normed <- res$qw$shape_post_w[, perm, drop = FALSE]
+    res$qw$rate_post_w_normed  <- sweep(res$qw$rate_post_w, 2, nw, "*")[, perm, drop = FALSE]
+  }
+
+  res
+}
+
+#' @keywords internal
 ebpmf_identity_init = function(X,
                                K,
                                init,

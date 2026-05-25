@@ -12,6 +12,7 @@ get_gamma_ci(
   X = NULL,
   K = NULL,
   Xcov = NULL,
+  normalized = TRUE,
   init_fn = NULL,
   verbose = TRUE,
   ...
@@ -35,6 +36,10 @@ Default \code{"bootstrap"}.}
 
 \item{Xcov}{Covariate matrix or list used in the original fit (required
 for bootstrap).}
+
+\item{normalized}{Logical. If \code{TRUE} (default), reads gamma estimates
+from \code{fit$res$gl_normed} (reordered by descending \eqn{\lambda}).
+If \code{FALSE}, reads from \code{fit$res$gl} (original component order).}
 
 \item{init_fn}{Optional function with signature
 \code{function(X_star, K)} that returns an initialization object

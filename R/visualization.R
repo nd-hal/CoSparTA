@@ -16,9 +16,11 @@
 #'   \code{NULL} plots all K components.
 #' @param time_labels Numeric vector of length \code{p} giving x-axis values
 #'   (e.g., seconds, time indices). Default \code{NULL} uses \code{1:p}.
-#' @param normalize Logical. If \code{TRUE} and \code{fit} is supplied, uses
-#'   \code{\link{normalize_factors}} to normalize columns to unit norm. Ignored
-#'   when \code{Ef} is provided directly. Default \code{TRUE}.
+#' @param normalize Logical. If \code{TRUE} (default) and \code{fit} is
+#'   supplied, reads \code{fit$res$qf$Ef_normed} (unit-norm, descending
+#'   \eqn{\lambda} order). Falls back to \code{\link{normalize_factors}} for
+#'   legacy fits that lack \code{_normed} fields. Ignored when \code{Ef} is
+#'   provided directly.
 #' @param ncol Integer. Number of columns in the facet layout. Default \code{1}.
 #' @param xlim Numeric vector of length 2 passed to
 #'   \code{ggplot2::coord_cartesian(xlim = xlim)} to restrict the x-axis range.
@@ -49,9 +51,10 @@ plot_time_factors <- function(fit = NULL, ranks = NULL, time_labels = NULL,
   if (!is.null(Ef)) {
     # use directly supplied matrix
   } else if (!is.null(fit)) {
-    if (normalize) {
-      nf <- normalize_factors(fit)
-      Ef <- nf$Ef
+    if (normalize && !is.null(fit$res$qf$Ef_normed)) {
+      Ef <- fit$res$qf$Ef_normed
+    } else if (normalize) {
+      Ef <- normalize_factors(fit)$Ef
     } else {
       Ef <- fit$res$qf$Ef
     }
@@ -114,9 +117,11 @@ plot_time_factors <- function(fit = NULL, ranks = NULL, time_labels = NULL,
 #' @param channel_groups Character vector of length \code{w} giving group labels
 #'   for each channel (e.g., \code{c(rep("TextEmo", 5), rep("Gaze", 25))}). When
 #'   supplied, channels are grouped into facet columns. Default \code{NULL}.
-#' @param normalize Logical. If \code{TRUE} and \code{fit} is supplied, uses
-#'   \code{\link{normalize_factors}} to normalize columns to unit norm. Ignored
-#'   when \code{Ew} is provided directly. Default \code{TRUE}.
+#' @param normalize Logical. If \code{TRUE} (default) and \code{fit} is
+#'   supplied, reads \code{fit$res$qw$Ew_normed} (unit-norm, descending
+#'   \eqn{\lambda} order). Falls back to \code{\link{normalize_factors}} for
+#'   legacy fits that lack \code{_normed} fields. Ignored when \code{Ew} is
+#'   provided directly.
 #' @param show_names Logical. If \code{TRUE} and \code{channel_names} is supplied,
 #'   shows individual channel names on the x-axis. Default \code{FALSE}.
 #'
@@ -150,9 +155,10 @@ plot_channel_factors <- function(fit = NULL, ranks = NULL, channel_names = NULL,
   if (!is.null(Ew)) {
     # use directly supplied matrix
   } else if (!is.null(fit)) {
-    if (normalize) {
-      nf <- normalize_factors(fit)
-      Ew <- nf$Ew
+    if (normalize && !is.null(fit$res$qw$Ew_normed)) {
+      Ew <- fit$res$qw$Ew_normed
+    } else if (normalize) {
+      Ew <- normalize_factors(fit)$Ew
     } else {
       Ew <- fit$res$qw$Ew
     }

@@ -4,7 +4,7 @@
 \alias{get_significant_patterns}
 \title{Identify Significant Channels and Time Points per Factor via lFDR Control}
 \usage{
-get_significant_patterns(fit, alpha = 0.05, mode = "both")
+get_significant_patterns(fit, alpha = 0.05, mode = "both", normalized = TRUE)
 }
 \arguments{
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
@@ -14,6 +14,9 @@ get_significant_patterns(fit, alpha = 0.05, mode = "both")
 \item{mode}{Character string specifying which mode(s) to run discovery on:
 \code{'F'} for time factors, \code{'W'} for channel weights, or
 \code{'both'}. Default \code{'both'}.}
+
+\item{normalized}{Logical. If \code{TRUE} (default), reads from
+\code{_normed} PIP fields. If \code{FALSE}, reads from raw PIP fields.}
 }
 \value{
 A list of length \code{K} (one element per factor). Each element

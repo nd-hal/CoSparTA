@@ -4,11 +4,17 @@
 \alias{reconstruct_tensor}
 \title{Reconstruct the Denoised Mean Tensor from a CoSparTA fit}
 \usage{
-reconstruct_tensor(fit)
+reconstruct_tensor(fit, normalized = TRUE)
 }
 \arguments{
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
 \code{\link{CoSparTA_missing}}.}
+
+\item{normalized}{Logical. If \code{TRUE} (default), reads from the
+\code{_normed} fields (\code{El_normed}, \code{Ef_normed},
+\code{Ew_normed}) and scales each component by
+\code{lambda_normed[k]}. If \code{FALSE}, uses raw posterior means
+directly (current behavior).}
 }
 \value{
 A numeric array of dimensions \code{n x p x w} containing the

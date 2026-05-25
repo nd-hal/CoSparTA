@@ -202,7 +202,8 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' @param U2_true Optional true F matrix for simulation evaluation.
 #' @param U3_true Optional true W matrix for simulation evaluation.
 #'
-#' @return Same structure as \code{\link{CoSparTA}} with one additional field:
+#' @return Same structure as \code{\link{CoSparTA}} (including all
+#' \code{_normed} fields) with one additional field:
 #' \describe{
 #'   \item{obs_structure}{Internal observation structure used during fitting,
 #'     required by \code{\link{evaluate_missing_prediction}}.}
@@ -493,6 +494,8 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
     tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$shape_post_w; res$qw$shape_post_w <- tmp
     tmp <- matrix(NA_real_, w_original, K); tmp[!channels_zero,] <- res$qw$rate_post_w;  res$qw$rate_post_w  <- tmp
   }
+
+  res <- .add_normed_fields(res)
 
   return(list(
     elbo         = elbo,

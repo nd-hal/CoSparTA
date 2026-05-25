@@ -4,7 +4,7 @@
 \alias{get_pip}
 \title{Extract Posterior Inclusion Probabilities from a CoSparTA fit}
 \usage{
-get_pip(fit, mode = "L", threshold = NULL)
+get_pip(fit, mode = "L", threshold = NULL, normalized = TRUE)
 }
 \arguments{
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
@@ -16,6 +16,10 @@ get_pip(fit, mode = "L", threshold = NULL)
 \item{threshold}{Numeric value in \code{[0, 1]}. If supplied, returns a
 logical matrix indicating which elements exceed the threshold. If
 \code{NULL}, returns the raw PIP matrix. Default \code{NULL}.}
+
+\item{normalized}{Logical. If \code{TRUE} (default), reads from the
+\code{_normed} PIP fields (unit-norm columns, descending \eqn{\lambda}
+order). If \code{FALSE}, reads from the raw PIP fields.}
 }
 \value{
 If \code{threshold = NULL}, a numeric matrix of PIPs with the same

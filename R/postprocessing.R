@@ -8,6 +8,11 @@
 #' canonical form for comparing decompositions and for downstream use with
 #' \code{project_tensor} and \code{reconstruct_tensor}.
 #'
+#' Since \code{\link{CoSparTA}} now produces normalized outputs directly in
+#' \code{_normed} fields (e.g. \code{fit$res$ql$El_normed}), this function is
+#' primarily useful for legacy code or custom normalization workflows applied
+#' to fit objects that lack those fields.
+#'
 #' @param fit A fitted object returned by \code{\link{CoSparTA}} or
 #'   \code{\link{CoSparTA_missing}}.
 #'
@@ -183,7 +188,11 @@ project_tensor <- function(X_new, fit = NULL, normalize = TRUE,
   if (!is.null(Ef) && !is.null(Ew) && !is.null(lambda)) {
     # raw matrices supplied directly — assume already normalized
   } else if (!is.null(fit)) {
-    if (normalize) {
+    if (normalize && !is.null(fit$res$qf$Ef_normed)) {
+      Ef     <- fit$res$qf$Ef_normed
+      Ew     <- fit$res$qw$Ew_normed
+      lambda <- fit$res$lambda_normed
+    } else if (normalize) {
       nf     <- normalize_factors(fit)
       Ef     <- nf$Ef
       Ew     <- nf$Ew
@@ -251,6 +260,11 @@ project_tensor <- function(X_new, fit = NULL, normalize = TRUE,
 #'
 #' @param fit A fitted object returned by \code{\link{CoSparTA}} or
 #'   \code{\link{CoSparTA_missing}}.
+#' @param normalized Logical. If \code{TRUE} (default), reads from the
+#'   \code{_normed} fields (\code{El_normed}, \code{Ef_normed},
+#'   \code{Ew_normed}) and scales each component by
+#'   \code{lambda_normed[k]}. If \code{FALSE}, uses raw posterior means
+#'   directly (current behavior).
 #'
 #' @return A numeric array of dimensions \code{n x p x w} containing the
 #'   reconstructed denoised mean tensor \eqn{\hat{X}}.
@@ -270,11 +284,19 @@ project_tensor <- function(X_new, fit = NULL, normalize = TRUE,
 #' }
 #'
 #' @export
-reconstruct_tensor <- function(fit) {
+reconstruct_tensor <- function(fit, normalized = TRUE) {
 
-  El <- fit$res$ql$El
-  Ef <- fit$res$qf$Ef
-  Ew <- fit$res$qw$Ew
+  if (normalized && !is.null(fit$res$ql$El_normed)) {
+    El     <- fit$res$ql$El_normed
+    Ef     <- fit$res$qf$Ef_normed
+    Ew     <- fit$res$qw$Ew_normed
+    lambda <- fit$res$lambda_normed
+  } else {
+    El     <- fit$res$ql$El
+    Ef     <- fit$res$qf$Ef
+    Ew     <- fit$res$qw$Ew
+    lambda <- NULL
+  }
 
   n <- nrow(El)
   p <- nrow(Ef)
@@ -284,9 +306,10 @@ reconstruct_tensor <- function(fit) {
   X_hat <- array(0, dim = c(n, p, w))
 
   for (k in seq_len(K)) {
-    # outer(n×p matrix, w-vector) produces an n×p×w array per R outer() semantics
     lf_k  <- El[, k, drop = FALSE] %*% t(Ef[, k, drop = FALSE])  # n x p
-    X_hat <- X_hat + outer(lf_k, Ew[, k])                         # n x p x w
+    term  <- outer(lf_k, Ew[, k])                                  # n x p x w
+    if (!is.null(lambda)) term <- term * lambda[k]
+    X_hat <- X_hat + term
   }
 
   X_hat

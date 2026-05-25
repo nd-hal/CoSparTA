@@ -4,7 +4,12 @@
 \alias{get_posterior_quantile}
 \title{Compute Exact Posterior Quantiles from a CoSparTA fit}
 \usage{
-get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "L")
+get_posterior_quantile(
+  fit,
+  probs = c(0.025, 0.975),
+  mode = "L",
+  normalized = TRUE
+)
 }
 \arguments{
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
@@ -16,6 +21,11 @@ evaluate the quantile function. Default \code{c(0.025, 0.975)}.}
 \item{mode}{Character string specifying which mode to extract:
 \code{'L'} for observation loadings, \code{'F'} for time factors,
 \code{'W'} for channel weights. Default \code{'L'}.}
+
+\item{normalized}{Logical. If \code{TRUE} (default), reads from
+\code{shape_post_*_normed}, \code{rate_post_*_normed}, and
+\code{PIP*_normed} fields (unit-norm columns, descending \eqn{\lambda}
+order). If \code{FALSE}, reads from the corresponding raw fields.}
 }
 \value{
 A named list with one matrix per entry of \code{probs}. Each

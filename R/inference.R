@@ -14,6 +14,9 @@
 #' @param threshold Numeric value in \code{[0, 1]}. If supplied, returns a
 #'   logical matrix indicating which elements exceed the threshold. If
 #'   \code{NULL}, returns the raw PIP matrix. Default \code{NULL}.
+#' @param normalized Logical. If \code{TRUE} (default), reads from the
+#'   \code{_normed} PIP fields (unit-norm columns, descending \eqn{\lambda}
+#'   order). If \code{FALSE}, reads from the raw PIP fields.
 #'
 #' @return If \code{threshold = NULL}, a numeric matrix of PIPs with the same
 #'   dimensions as the corresponding factor matrix (\code{n x K} for L,
@@ -35,14 +38,23 @@
 #' }
 #'
 #' @export
-get_pip <- function(fit, mode = 'L', threshold = NULL) {
+get_pip <- function(fit, mode = 'L', threshold = NULL, normalized = TRUE) {
 
-  pip_mat <- switch(mode,
-    'L' = fit$res$ql$PIPl,
-    'F' = fit$res$qf$PIPf,
-    'W' = fit$res$qw$PIPw,
-    stop("mode must be one of 'L', 'F', or 'W'")
-  )
+  pip_mat <- if (normalized) {
+    switch(mode,
+      'L' = fit$res$ql$PIPl_normed,
+      'F' = fit$res$qf$PIPf_normed,
+      'W' = fit$res$qw$PIPw_normed,
+      stop("mode must be one of 'L', 'F', or 'W'")
+    )
+  } else {
+    switch(mode,
+      'L' = fit$res$ql$PIPl,
+      'F' = fit$res$qf$PIPf,
+      'W' = fit$res$qw$PIPw,
+      stop("mode must be one of 'L', 'F', or 'W'")
+    )
+  }
 
   if (is.null(pip_mat) || all(is.na(pip_mat))) {
     warning(paste("PIPs not available for mode", mode,
@@ -77,6 +89,11 @@ get_pip <- function(fit, mode = 'L', threshold = NULL) {
 #'   \code{'W'} for channel weights. Default \code{'L'}.
 #' @param level Numeric credible level in \code{(0, 1)}. Default \code{0.95}
 #'   for 95\% credible intervals.
+#' @param normalized Logical. If \code{TRUE} (default), reads from the
+#'   \code{_normed} fields (unit-norm columns, descending \eqn{\lambda}
+#'   order), computing variance from \code{shape_post_*_normed} and
+#'   \code{rate_post_*_normed}. If \code{FALSE}, reads from raw fields and
+#'   uses \code{Varl}/\code{Varf}/\code{Varw} directly.
 #'
 #' @return A list with three matrices of the same dimensions as the
 #'   corresponding factor matrix:
@@ -103,37 +120,69 @@ get_pip <- function(fit, mode = 'L', threshold = NULL) {
 #' }
 #'
 #' @export
-get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
+get_credible_interval <- function(fit, mode = 'L', level = 0.95,
+                                   normalized = TRUE) {
 
   if (level <= 0 || level >= 1) {
     stop("level must be between 0 and 1")
   }
 
-  mean_mat <- switch(mode,
-    'L' = fit$res$ql$El,
-    'F' = fit$res$qf$Ef,
-    'W' = fit$res$qw$Ew,
-    stop("mode must be one of 'L', 'F', or 'W'")
-  )
-
-  var_mat <- switch(mode,
-    'L' = fit$res$ql$Varl,
-    'F' = fit$res$qf$Varf,
-    'W' = fit$res$qw$Varw
-  )
-
-  if (is.null(var_mat) || all(is.na(var_mat))) {
-    warning(paste("Posterior variance not available for mode", mode,
-                  "-- credible intervals cannot be computed."))
-    return(NULL)
+  if (normalized) {
+    mean_mat  <- switch(mode,
+      'L' = fit$res$ql$El_normed,
+      'F' = fit$res$qf$Ef_normed,
+      'W' = fit$res$qw$Ew_normed,
+      stop("mode must be one of 'L', 'F', or 'W'")
+    )
+    shape_mat <- switch(mode,
+      'L' = fit$res$ql$shape_post_l_normed,
+      'F' = fit$res$qf$shape_post_f_normed,
+      'W' = fit$res$qw$shape_post_w_normed
+    )
+    rate_mat  <- switch(mode,
+      'L' = fit$res$ql$rate_post_l_normed,
+      'F' = fit$res$qf$rate_post_f_normed,
+      'W' = fit$res$qw$rate_post_w_normed
+    )
+    pip_mat   <- switch(mode,
+      'L' = fit$res$ql$PIPl_normed,
+      'F' = fit$res$qf$PIPf_normed,
+      'W' = fit$res$qw$PIPw_normed
+    )
+    if (is.null(shape_mat) || all(is.na(shape_mat))) {
+      warning(paste("Normalized posterior parameters not available for mode",
+                    mode, "-- credible intervals cannot be computed."))
+      return(NULL)
+    }
+    # Law of total variance: pip*shape/rate^2 + pip*(1-pip)*(shape/rate)^2
+    slab_mean <- shape_mat / rate_mat
+    var_mat   <- pip_mat * shape_mat / rate_mat^2 +
+                 slab_mean^2 * pip_mat * (1 - pip_mat)
+  } else {
+    mean_mat <- switch(mode,
+      'L' = fit$res$ql$El,
+      'F' = fit$res$qf$Ef,
+      'W' = fit$res$qw$Ew,
+      stop("mode must be one of 'L', 'F', or 'W'")
+    )
+    var_mat <- switch(mode,
+      'L' = fit$res$ql$Varl,
+      'F' = fit$res$qf$Varf,
+      'W' = fit$res$qw$Varw
+    )
+    if (is.null(var_mat) || all(is.na(var_mat))) {
+      warning(paste("Posterior variance not available for mode", mode,
+                    "-- credible intervals cannot be computed."))
+      return(NULL)
+    }
   }
 
   z <- qnorm((1 + level) / 2)
-  sd_mat <- sqrt(var_mat)
+  sd_mat <- sqrt(pmax(var_mat, 0))
 
   return(list(
     mean  = mean_mat,
-    lower = pmax(0, mean_mat - z * sd_mat),  # non-negative since loadings >= 0
+    lower = pmax(0, mean_mat - z * sd_mat),
     upper = mean_mat + z * sd_mat
   ))
 }
@@ -157,6 +206,8 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
 #' @param mode Character string specifying which mode(s) to run discovery on:
 #'   \code{'F'} for time factors, \code{'W'} for channel weights, or
 #'   \code{'both'}. Default \code{'both'}.
+#' @param normalized Logical. If \code{TRUE} (default), reads from
+#'   \code{_normed} PIP fields. If \code{FALSE}, reads from raw PIP fields.
 #'
 #' @return A list of length \code{K} (one element per factor). Each element
 #'   is a named list with:
@@ -187,7 +238,8 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
 #' }
 #'
 #' @export
-get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
+get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both',
+                                      normalized = TRUE) {
 
   if (alpha <= 0 || alpha >= 1) stop("alpha must be between 0 and 1")
   if (!mode %in% c('F', 'W', 'both')) stop("mode must be 'F', 'W', or 'both'")
@@ -202,7 +254,7 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 
     # -- F mode: time points --
     if (mode %in% c('F', 'both')) {
-      pip_f <- fit$res$qf$PIPf
+      pip_f <- if (normalized) fit$res$qf$PIPf_normed else fit$res$qf$PIPf
       if (!is.null(pip_f) && !all(is.na(pip_f[, l]))) {
         active_times <- lfdr_discovery(1 - pip_f[, l], alpha)
       } else {
@@ -212,7 +264,7 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 
     # -- W mode: channels --
     if (mode %in% c('W', 'both')) {
-      pip_w <- fit$res$qw$PIPw
+      pip_w <- if (normalized) fit$res$qw$PIPw_normed else fit$res$qw$PIPw
       if (!is.null(pip_w) && !all(is.na(pip_w[, l]))) {
         active_channels <- lfdr_discovery(1 - pip_w[, l], alpha)
       } else {
@@ -253,6 +305,10 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 #' @param mode Character string specifying which mode to extract:
 #'   \code{'L'} for observation loadings, \code{'F'} for time factors,
 #'   \code{'W'} for channel weights. Default \code{'L'}.
+#' @param normalized Logical. If \code{TRUE} (default), reads from
+#'   \code{shape_post_*_normed}, \code{rate_post_*_normed}, and
+#'   \code{PIP*_normed} fields (unit-norm columns, descending \eqn{\lambda}
+#'   order). If \code{FALSE}, reads from the corresponding raw fields.
 #'
 #' @return A named list with one matrix per entry of \code{probs}. Each
 #'   matrix has the same dimensions as the corresponding factor matrix
@@ -277,26 +333,52 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 #' }
 #'
 #' @export
-get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
+get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L',
+                                    normalized = TRUE) {
 
-  pip_mat <- switch(mode,
-    'L' = fit$res$ql$PIPl,
-    'F' = fit$res$qf$PIPf,
-    'W' = fit$res$qw$PIPw,
-    stop("mode must be one of 'L', 'F', or 'W'")
-  )
+  pip_mat <- if (normalized) {
+    switch(mode,
+      'L' = fit$res$ql$PIPl_normed,
+      'F' = fit$res$qf$PIPf_normed,
+      'W' = fit$res$qw$PIPw_normed,
+      stop("mode must be one of 'L', 'F', or 'W'")
+    )
+  } else {
+    switch(mode,
+      'L' = fit$res$ql$PIPl,
+      'F' = fit$res$qf$PIPf,
+      'W' = fit$res$qw$PIPw,
+      stop("mode must be one of 'L', 'F', or 'W'")
+    )
+  }
 
-  shape_mat <- switch(mode,
-    'L' = fit$res$ql$shape_post_l,
-    'F' = fit$res$qf$shape_post_f,
-    'W' = fit$res$qw$shape_post_w
-  )
+  shape_mat <- if (normalized) {
+    switch(mode,
+      'L' = fit$res$ql$shape_post_l_normed,
+      'F' = fit$res$qf$shape_post_f_normed,
+      'W' = fit$res$qw$shape_post_w_normed
+    )
+  } else {
+    switch(mode,
+      'L' = fit$res$ql$shape_post_l,
+      'F' = fit$res$qf$shape_post_f,
+      'W' = fit$res$qw$shape_post_w
+    )
+  }
 
-  rate_mat <- switch(mode,
-    'L' = fit$res$ql$rate_post_l,
-    'F' = fit$res$qf$rate_post_f,
-    'W' = fit$res$qw$rate_post_w
-  )
+  rate_mat <- if (normalized) {
+    switch(mode,
+      'L' = fit$res$ql$rate_post_l_normed,
+      'F' = fit$res$qf$rate_post_f_normed,
+      'W' = fit$res$qw$rate_post_w_normed
+    )
+  } else {
+    switch(mode,
+      'L' = fit$res$ql$rate_post_l,
+      'F' = fit$res$qf$rate_post_f,
+      'W' = fit$res$qw$rate_post_w
+    )
+  }
 
   if (is.null(shape_mat) || is.null(rate_mat) ||
       all(is.na(shape_mat)) || all(is.na(rate_mat))) {
@@ -375,6 +457,9 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'   replicates. Using per-replicate initialization (e.g., via
 #'   \code{init_cpapr}) is recommended for publication-quality
 #'   bootstrap inference.
+#' @param normalized Logical. If \code{TRUE} (default), reads gamma estimates
+#'   from \code{fit$res$gl_normed} (reordered by descending \eqn{\lambda}).
+#'   If \code{FALSE}, reads from \code{fit$res$gl} (original component order).
 #' @param verbose Logical. If \code{TRUE}, prints bootstrap progress.
 #'   Default \code{TRUE}.
 #' @param ... Additional arguments passed to \code{\link{CoSparTA}} during
@@ -414,10 +499,12 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #' @export
 get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
                           B = 200, X = NULL, K = NULL, Xcov = NULL,
-                          init_fn = NULL, verbose = TRUE, ...) {
+                          normalized = TRUE, init_fn = NULL,
+                          verbose = TRUE, ...) {
 
   method <- match.arg(method, c("delta", "bootstrap"))
-  gl     <- fit$res$gl
+  gl     <- if (normalized && !is.null(fit$res$gl_normed)) fit$res$gl_normed
+            else fit$res$gl
   K_fit  <- length(gl)
 
   # ------------------------------------------------------------------ #
