@@ -136,6 +136,37 @@ test_that("I2: _normed fields exist, have unit-norm columns, and raw fields are 
   expect_false(is.null(fit_B$res$ql$rate_post_l_normed))
 })
 
+test_that("I2b: get_loadings returns correct objects", {
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
+                   init = 'random_gamma', maxiter = 30,
+                   convergence_criteria = 'factor_change', verbose = FALSE)
+
+  # U1 normalized: n x K matrix, unit-norm columns
+  U1 <- get_loadings(fit_B, "U1")
+  expect_true(is.matrix(U1))
+  expect_equal(dim(U1), c(n, K))
+  expect_true(all(abs(sqrt(colSums(U1^2, na.rm = TRUE)) - 1) < 1e-10))
+
+  # U1 raw: matches fit$res$ql$El
+  U1_raw <- get_loadings(fit_B, "U1", normalized = FALSE)
+  expect_identical(U1_raw, fit_B$res$ql$El)
+
+  # weight: numeric vector of length K, descending
+  w <- get_loadings(fit_B, "weight")
+  expect_true(is.numeric(w))
+  expect_equal(length(w), K)
+  expect_true(all(diff(w) <= 0))
+
+  # gamma: list of length K
+  g <- get_loadings(fit_B, "gamma")
+  expect_true(is.list(g))
+  expect_equal(length(g), K)
+
+  # invalid what: informative error
+  expect_error(get_loadings(fit_B, "invalid"),
+               regexp = "should be one of")
+})
+
 test_that("I3: get_posterior_quantile uses _normed by default; normalized=FALSE uses raw", {
   fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                    init = 'random_gamma', maxiter = 30,

@@ -150,14 +150,24 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95,
       'W' = fit$res$qw$PIPw_normed
     )
     if (is.null(shape_mat) || all(is.na(shape_mat))) {
-      warning(paste("Normalized posterior parameters not available for mode",
-                    mode, "-- credible intervals cannot be computed."))
-      return(NULL)
+      # Fall back to raw posterior variance for modes that have no spike
+      # component (e.g. F mode with smooth prior stores Varf but not shape_post)
+      var_mat <- switch(mode,
+        'L' = fit$res$ql$Varl,
+        'F' = fit$res$qf$Varf,
+        'W' = fit$res$qw$Varw
+      )
+      if (is.null(var_mat) || all(is.na(var_mat))) {
+        warning(paste("Posterior variance not available for mode", mode,
+                      "-- credible intervals cannot be computed."))
+        return(NULL)
+      }
+    } else {
+      # Law of total variance: pip*shape/rate^2 + pip*(1-pip)*(shape/rate)^2
+      slab_mean <- shape_mat / rate_mat
+      var_mat   <- pip_mat * shape_mat / rate_mat^2 +
+                   slab_mean^2 * pip_mat * (1 - pip_mat)
     }
-    # Law of total variance: pip*shape/rate^2 + pip*(1-pip)*(shape/rate)^2
-    slab_mean <- shape_mat / rate_mat
-    var_mat   <- pip_mat * shape_mat / rate_mat^2 +
-                 slab_mean^2 * pip_mat * (1 - pip_mat)
   } else {
     mean_mat <- switch(mode,
       'L' = fit$res$ql$El,
