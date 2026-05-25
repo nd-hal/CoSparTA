@@ -4,7 +4,7 @@
 #' Thin R wrapper around \code{\link{calc_EZ_3d_cpp}} that accepts the same
 #' sparse coordinate-format data.table \code{x} used by \code{calc_EZ_3d()},
 #' making the Rcpp replacement a drop-in at the call site in
-#' \code{CxtEBTD()} and \code{CxtEBTD_missing()}.
+#' \code{CoSparTA()} and \code{CoSparTA_missing()}.
 #'
 #' @param x A data.table with integer columns \code{V1}, \code{V2}, \code{V3}
 #'   (1-based indices) and a numeric column \code{x} (observed counts).

@@ -2,13 +2,13 @@
 % Please edit documentation in R/postprocessing.R
 \name{normalize_factors}
 \alias{normalize_factors}
-\title{Normalize and Sort Components of a CxtEBTD fit}
+\title{Normalize and Sort Components of a CoSparTA fit}
 \usage{
 normalize_factors(fit)
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
-\code{\link{CxtEBTD_missing}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
+\code{\link{CoSparTA_missing}}.}
 }
 \value{
 A named list with:
@@ -35,7 +35,7 @@ A named list with:
 }
 }
 \description{
-Extracts the factor matrices from a fitted \code{\link{CxtEBTD}} object,
+Extracts the factor matrices from a fitted \code{\link{CoSparTA}} object,
 normalizes each column to unit Frobenius norm, computes a per-component
 weight \eqn{\lambda_k = \|\mathbf{l}_k\| \|\mathbf{f}_k\| \|\mathbf{w}_k\|},
 and returns components sorted by \eqn{\lambda} descending. This is the
@@ -44,7 +44,7 @@ canonical form for comparing decompositions and for downstream use with
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 
 norm_fit <- normalize_factors(fit)
 norm_fit$lambda   # component weights, descending
@@ -54,6 +54,6 @@ norm_fit$El       # normalized loading matrix (n x K)
 
 }
 \seealso{
-\code{\link{CxtEBTD}}, \code{\link{project_tensor}},
+\code{\link{CoSparTA}}, \code{\link{project_tensor}},
   \code{\link{reconstruct_tensor}}
 }

@@ -44,7 +44,7 @@ log_for_ebmf = function(Y){
 #' @description
 #' Computes the mean generalized KL divergence
 #' \eqn{D(A \| B) = A \log(A/B) - A + B}, averaged over all elements.
-#' Used as a convergence criterion in \code{\link{CxtEBTD}}.
+#' Used as a convergence criterion in \code{\link{CoSparTA}}.
 #'
 #' @param A Non-negative numeric matrix or vector (observed).
 #' @param B Non-negative numeric matrix or vector (fitted), same dimensions as \code{A}.

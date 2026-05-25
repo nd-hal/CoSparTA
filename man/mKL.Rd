@@ -17,5 +17,5 @@ A single numeric value giving the mean KL divergence.
 \description{
 Computes the mean generalized KL divergence
 \eqn{D(A \| B) = A \log(A/B) - A + B}, averaged over all elements.
-Used as a convergence criterion in \code{\link{CxtEBTD}}.
+Used as a convergence criterion in \code{\link{CoSparTA}}.
 }

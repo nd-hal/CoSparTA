@@ -26,7 +26,7 @@
 #'
 #' @export
 calc_EZ_3d_cpp <- function(V1, V2, V3, x_vals, alpha_k, n, p, w) {
-    .Call(`_CxtEBTD_calc_EZ_3d_cpp`, V1, V2, V3, x_vals, alpha_k, n, p, w)
+    .Call(`_CoSparTA_calc_EZ_3d_cpp`, V1, V2, V3, x_vals, alpha_k, n, p, w)
 }
 
 #' Sparse Softmax (Responsibility) Computation
@@ -55,6 +55,6 @@ calc_EZ_3d_cpp <- function(V1, V2, V3, x_vals, alpha_k, n, p, w) {
 #'
 #' @export
 calc_qz_sparse_cpp <- function(V1, V2, V3, Elogl, Elogf, Elogw) {
-    .Call(`_CxtEBTD_calc_qz_sparse_cpp`, V1, V2, V3, Elogl, Elogf, Elogw)
+    .Call(`_CoSparTA_calc_qz_sparse_cpp`, V1, V2, V3, Elogl, Elogf, Elogw)
 }
 

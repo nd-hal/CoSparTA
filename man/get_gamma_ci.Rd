@@ -18,7 +18,7 @@ get_gamma_ci(
 )
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
 
 \item{method}{Character: \code{"delta"} or \code{"bootstrap"}.
 Default \code{"bootstrap"}.}
@@ -49,7 +49,7 @@ bootstrap inference.}
 \item{verbose}{Logical. If \code{TRUE}, prints bootstrap progress.
 Default \code{TRUE}.}
 
-\item{...}{Additional arguments passed to \code{\link{CxtEBTD}} during
+\item{...}{Additional arguments passed to \code{\link{CoSparTA}} during
 bootstrap refitting (e.g., \code{maxiter}, \code{init},
 \code{convergence_criteria}).}
 }
@@ -76,18 +76,23 @@ that the mean local-fdr does not exceed alpha.
 Confidence Intervals for Covariate Coefficients (Gamma)
 
 Computes confidence intervals for the covariate effect parameters
-\eqn{\gamma} estimated by \code{\link{CxtEBTD}}. Two methods are available:
+\eqn{\gamma} estimated by \code{\link{CoSparTA}}. Two methods are available:
 
 \describe{
   \item{\code{"delta"}}{Fast asymptotic intervals based on the Hessian of
-    the marginal log-likelihood from the EBPM optimization. These are
-    \strong{conditional} standard errors -- they measure uncertainty in
-    \eqn{\gamma} given the current F and W estimates, and may
-    underestimate the true uncertainty. Recommended for exploratory
-    screening.}
+    the marginal log-likelihood from the EBPM optimization. The full
+    Hessian (covering \eqn{\gamma} together with nuisance parameters
+    \eqn{\pi_0}, \eqn{\alpha}, \eqn{\beta}) is inverted first, and then
+    the \eqn{\gamma} submatrix is extracted, implementing
+    \eqn{\mathrm{Var}(\hat\gamma_k) = [H_k^{-1}]_{\gamma,\gamma}} per
+    equation (21) of the paper. This correctly accounts for uncertainty in
+    the nuisance parameters. These are \strong{conditional} standard errors
+    -- they measure uncertainty in \eqn{\gamma} given the current F and W
+    estimates, and may underestimate the true uncertainty. Recommended for
+    exploratory screening.}
   \item{\code{"bootstrap"}}{Parametric bootstrap intervals. Generates
     \code{B} synthetic tensors from the fitted Poisson rates, refits
-    \code{\link{CxtEBTD}} on each, and collects the bootstrap distribution
+    \code{\link{CoSparTA}} on each, and collects the bootstrap distribution
     of \eqn{\gamma}. This correctly accounts for all sources of estimation
     uncertainty (including uncertainty in F and W). Recommended for
     publication-quality inference. Computationally expensive: requires
@@ -96,7 +101,7 @@ Computes confidence intervals for the covariate effect parameters
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov, maxiter = 50)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov, maxiter = 50)
 
 # Fast delta method (exploratory)
 ci_delta <- get_gamma_ci(fit, method = "delta")
@@ -109,6 +114,6 @@ ci_boot <- get_gamma_ci(fit, method = "bootstrap", B = 200,
 
 }
 \seealso{
-\code{\link{CxtEBTD}},
+\code{\link{CoSparTA}},
   \code{\link{ebpm_point_gamma_multiplier_covariates}}
 }

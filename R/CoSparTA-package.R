@@ -1,5 +1,5 @@
 #' @docType package
-#' @name CxtEBTD-package
+#' @name CoSparTA-package
 #' @import data.table
 #' @importFrom dplyr %>% group_by summarize arrange left_join
 #' @importFrom matrixStats rowMaxs
@@ -10,7 +10,7 @@
 #' @importFrom utils globalVariables
 #' @importFrom slam as.simple_sparse_array
 #' @importFrom Matrix sparseMatrix
-#' @useDynLib CxtEBTD, .registration = TRUE
+#' @useDynLib CoSparTA, .registration = TRUE
 #' @keywords internal
 NULL
 

@@ -82,14 +82,14 @@ Useful for simulation studies evaluating decomposition accuracy.
 \dontrun{
 # Supervised simulation
 sim <- simulate_tensor(n = 100, p = 20, w = 10, K = 3)
-fit <- CxtEBTD(sim$X, K = 3, Xcov = sim$Xcov)
+fit <- CoSparTA(sim$X, K = 3, Xcov = sim$Xcov)
 
 # Unsupervised simulation
 sim0 <- simulate_tensor(n = 100, p = 20, w = 10, K = 2, gamma_true = FALSE)
-fit0 <- CxtEBTD(sim0$X, K = 2)
+fit0 <- CoSparTA(sim0$X, K = 2)
 }
 
 }
 \seealso{
-\code{\link{CxtEBTD}}, \code{\link{match_factors}}
+\code{\link{CoSparTA}}, \code{\link{match_factors}}
 }

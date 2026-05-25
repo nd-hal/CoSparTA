@@ -19,7 +19,7 @@
 #' parameters \eqn{(\pi_0, \alpha, \beta, \gamma)} are estimated by maximizing
 #' the marginal likelihood via \code{nlm} (with \code{optim} as fallback).
 #' This function is the core building block of the covariate-aware mode update
-#' in \code{\link{CxtEBTD}}.
+#' in \code{\link{CoSparTA}}.
 #'
 #' @param x Non-negative integer vector of observed counts.
 #' @param s Numeric scalar or vector of length \code{length(x)} giving
@@ -64,7 +64,7 @@
 #'     \code{?nlm}). For \code{optim} fallback: 0 = converged.}
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}, \code{\link[ebpm]{ebpm_point_gamma}}
+#' @seealso \code{\link{CoSparTA}}, \code{\link[ebpm]{ebpm_point_gamma}}
 #'
 #' @examples
 #' \dontrun{

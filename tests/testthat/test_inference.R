@@ -1,7 +1,7 @@
 # Tests I-K: PIP, credible intervals, significant patterns.
 # Shared objects come from helper-sim.R.
 
-fit <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
+fit <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                init = 'random_gamma', maxiter = 5,
                convergence_criteria = 'factor_change', verbose = FALSE)
 

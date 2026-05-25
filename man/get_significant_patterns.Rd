@@ -7,7 +7,7 @@
 get_significant_patterns(fit, alpha = 0.05, mode = "both")
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
 
 \item{alpha}{Numeric FDR level in \code{(0, 1)}. Default \code{0.05}.}
 
@@ -44,7 +44,7 @@ such that the mean local-fdr does not exceed \code{alpha}.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 
 # Discover active channels and time points at 5\% FDR
 patterns <- get_significant_patterns(fit, alpha = 0.05)

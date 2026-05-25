@@ -4,7 +4,18 @@
 \alias{build_tensor}
 \title{Build a 3-Way Tensor from Long-Format Data}
 \usage{
-build_tensor(data, row, col, slice, value = NULL, time_bins = NULL, fill = 0L)
+build_tensor(
+  data,
+  row,
+  col,
+  slice,
+  value = NULL,
+  time_bins = NULL,
+  fill = 0L,
+  row_levels = NULL,
+  col_levels = NULL,
+  slice_levels = NULL
+)
 }
 \arguments{
 \item{data}{A data frame in long format.}
@@ -32,6 +43,19 @@ Default \code{NULL}.}
 
 \item{fill}{Numeric. Value to fill for unobserved \code{(row, col, slice)}
 combinations. Default \code{0L}.}
+
+\item{row_levels}{Optional character or factor vector specifying the complete
+set of levels for the row dimension (e.g. all session IDs). If \code{NULL},
+levels are inferred from the data.}
+
+\item{col_levels}{Optional character or factor vector specifying the complete
+set of levels for the column dimension (e.g. all time slots). If
+\code{NULL}, levels are inferred from the data. Recommended for time
+dimensions where empty slots should be preserved.}
+
+\item{slice_levels}{Optional character or factor vector specifying the
+complete set of levels for the slice dimension (e.g. all
+channels/websites). If \code{NULL}, levels are inferred from the data.}
 }
 \value{
 A named list with:
@@ -48,7 +72,7 @@ A named list with:
 }
 \description{
 Converts a long-format data frame into a 3-dimensional array suitable for
-\code{\link{CxtEBTD}}. Supports two input styles: (1) raw event logs where
+\code{\link{CoSparTA}}. Supports two input styles: (1) raw event logs where
 each row is a single event and counts are computed automatically, or
 (2) pre-aggregated data where a value column is already provided.
 Optionally bins a numeric or datetime time column into intervals.
@@ -102,11 +126,21 @@ events_dt <- data.frame(
 tensor_data <- build_tensor(events_dt, row = "session", col = "time",
                              slice = "action", time_bins = 24)
 
-# Feed directly into CxtEBTD
-fit <- CxtEBTD(tensor_data$X, K = 3)
+# Feed directly into CoSparTA
+fit <- CoSparTA(tensor_data$X, K = 3)
+
+# Ensure all 48 time slots are present even if some are empty
+tensor_out <- build_tensor(
+  data       = df,
+  user_col   = "session_id",
+  time_col   = "hour",
+  chan_col   = "website",
+  count_col  = "count",
+  col_levels = paste0("H", sprintf("\%02d", 0:47))
+)
 }
 
 }
 \seealso{
-\code{\link{CxtEBTD}}
+\code{\link{CoSparTA}}
 }

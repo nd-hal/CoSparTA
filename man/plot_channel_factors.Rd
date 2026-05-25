@@ -16,7 +16,7 @@ plot_channel_factors(
 )
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}. Either
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}}. Either
 \code{fit} or \code{Ew} must be supplied.}
 
 \item{ranks}{Integer vector specifying which components to plot. Default
@@ -54,7 +54,7 @@ group labels as facet columns.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 
 # Simple: channels labeled 1 to w
 plot_channel_factors(fit)

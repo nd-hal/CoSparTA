@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Converts a long-format data frame into a 3-dimensional array suitable for
-#' \code{\link{CxtEBTD}}. Supports two input styles: (1) raw event logs where
+#' \code{\link{CoSparTA}}. Supports two input styles: (1) raw event logs where
 #' each row is a single event and counts are computed automatically, or
 #' (2) pre-aggregated data where a value column is already provided.
 #' Optionally bins a numeric or datetime time column into intervals.
@@ -98,8 +98,8 @@
 #' tensor_data <- build_tensor(events_dt, row = "session", col = "time",
 #'                              slice = "action", time_bins = 24)
 #'
-#' # Feed directly into CxtEBTD
-#' fit <- CxtEBTD(tensor_data$X, K = 3)
+#' # Feed directly into CoSparTA
+#' fit <- CoSparTA(tensor_data$X, K = 3)
 #'
 #' # Ensure all 48 time slots are present even if some are empty
 #' tensor_out <- build_tensor(
@@ -112,7 +112,7 @@
 #' )
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}
+#' @seealso \code{\link{CoSparTA}}
 #' @export
 build_tensor <- function(data, row, col, slice, value = NULL,
                          time_bins = NULL, fill = 0L,

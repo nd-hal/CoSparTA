@@ -7,7 +7,7 @@
 evaluate_missing_prediction(fit, missing_info)
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD_missing}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA_missing}}.}
 
 \item{missing_info}{Output from \code{\link{generate_missing_mask}}.}
 }
@@ -24,7 +24,7 @@ A named list with:
 }
 \description{
 Computes prediction metrics for held-out entries after fitting
-\code{\link{CxtEBTD_missing}}. Reconstructs the predicted Poisson rate
+\code{\link{CoSparTA_missing}}. Reconstructs the predicted Poisson rate
 at masked positions using the fitted factor matrices and compares against
 the true values.
 }
@@ -32,7 +32,7 @@ the true values.
 \dontrun{
 X <- array(rpois(20 * 12 * 4, lambda = 1.5), dim = c(20, 12, 4))
 mask_info <- generate_missing_mask(X, missing_rate = 0.1, seed = 42)
-fit <- CxtEBTD_missing(mask_info$X_obs, K = 3,
+fit <- CoSparTA_missing(mask_info$X_obs, K = 3,
                         obs_mask = mask_info$obs_mask)
 metrics <- evaluate_missing_prediction(fit, mask_info)
 }

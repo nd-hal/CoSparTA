@@ -189,7 +189,7 @@ calc_approx_elbo_F = function(x,alpha,K,ebpm.fn.f,res,ebps_control){
 #'
 #' @description
 #' Returns a list of default control parameters for the wavelet-based smooth
-#' factor estimation step in \code{\link{CxtEBTD}}. Pass the output as the
+#' factor estimation step in \code{\link{CoSparTA}}. Pass the output as the
 #' \code{smooth_control} argument to override individual settings.
 #'
 #' @return A named list with fields: \code{wave_trans}, \code{ndwt_method},

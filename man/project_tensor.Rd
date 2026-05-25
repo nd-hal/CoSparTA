@@ -20,8 +20,8 @@ observation). In the latter case the input is wrapped as
 \code{array(X_new, dim = c(1, p, w))} and a length-\code{K} vector is
 returned instead of a \code{1 x K} matrix.}
 
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
-\code{\link{CxtEBTD_missing}}. Either \code{fit} or all of \code{Ef},
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
+\code{\link{CoSparTA_missing}}. Either \code{fit} or all of \code{Ef},
 \code{Ew}, and \code{lambda} must be supplied.}
 
 \item{normalize}{Logical. If \code{TRUE} (default) and \code{fit} is
@@ -47,7 +47,7 @@ If \code{X_new} is a 3D array: an \code{n_new x K} numeric matrix
   numeric vector of length \code{K}.
 }
 \description{
-Given a fitted \code{\link{CxtEBTD}} object (or raw factor matrices),
+Given a fitted \code{\link{CoSparTA}} object (or raw factor matrices),
 projects one or more new observations onto the learned factor space to
 produce a loading matrix. Each observation is a \code{p x w} count slice;
 the function recovers the \code{K}-dimensional representation without
@@ -68,7 +68,7 @@ multiply.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X_train, K = 3)
+fit <- CoSparTA(X_train, K = 3)
 
 # Project a batch of new observations (50 x p x w array)
 L_new <- project_tensor(X_new, fit)          # 50 x 3 matrix
@@ -87,5 +87,5 @@ L_new2 <- project_tensor(X_new, Ef = nf$Ef, Ew = nf$Ew, lambda = nf$lambda)
 }
 \seealso{
 \code{\link{normalize_factors}}, \code{\link{reconstruct_tensor}},
-  \code{\link{CxtEBTD}}
+  \code{\link{CoSparTA}}
 }

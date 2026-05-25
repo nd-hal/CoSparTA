@@ -1,10 +1,10 @@
 # =============================================================================
-# CxtEBTD — end-to-end pipeline demo
+# CoSparTA — end-to-end pipeline demo
 # Demonstrates the full analysis workflow from raw event logs to inference.
 # Data files are in the data/ directory of this package.
 # =============================================================================
 
-library(CxtEBTD)
+library(CoSparTA)
 library(dplyr)
 library(readr)
 library(reticulate)
@@ -61,7 +61,7 @@ cat("Sparsity:  ", round(mean(X == 0), 4), "\n")
 init_vals <- init_cpapr(X, K = 4, virtualenv = "cxtebtd_env")
 
 # Supervised fit: shared covariate matrix across all factors
-fit <- CxtEBTD(
+fit <- CoSparTA(
   X                    = X,
   K                    = 4,
   Xcov                 = Xcov_mat,
@@ -80,7 +80,7 @@ fit <- CxtEBTD(
 # Rank-specific covariate list: both covariates, NULL, cov1 only, cov2 only
 Xcov_cov1 <- Xcov_mat[, 1, drop = FALSE]
 Xcov_cov2 <- Xcov_mat[, 2, drop = FALSE]
-fit_rankspec <- CxtEBTD(
+fit_rankspec <- CoSparTA(
   X                    = X,
   K                    = 4,
   Xcov                 = list(Xcov_mat, NULL, Xcov_cov1, Xcov_cov2),
@@ -94,7 +94,7 @@ cat("Rank-specific fit done\n")
 
 # Missing data handling
 mask     <- generate_missing_mask(X, missing_rate = 0.10)
-fit_miss <- CxtEBTD_missing(
+fit_miss <- CoSparTA_missing(
   X                    = X,
   K                    = 4,
   Xcov                 = Xcov_mat,
@@ -135,7 +135,7 @@ print(ci_gamma[[1]])   # factor 1 results
 # =============================================================================
 
 # Fit covariate-free model
-fit_unsup <- CxtEBTD(
+fit_unsup <- CoSparTA(
   X                    = X,
   K                    = 4,
   Xcov                 = NULL,

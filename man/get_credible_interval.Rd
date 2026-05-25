@@ -2,12 +2,12 @@
 % Please edit documentation in R/inference.R
 \name{get_credible_interval}
 \alias{get_credible_interval}
-\title{Compute Credible Intervals from a CxtEBTD fit}
+\title{Compute Credible Intervals from a CoSparTA fit}
 \usage{
 get_credible_interval(fit, mode = "L", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
 
 \item{mode}{Character string specifying which mode to extract:
 \code{'L'} for observation loadings, \code{'F'} for time factors,
@@ -29,7 +29,7 @@ for the requested mode.
 }
 \description{
 Computes approximate credible intervals for factor elements using the
-posterior mean and variance stored in a fitted \code{\link{CxtEBTD}}
+posterior mean and variance stored in a fitted \code{\link{CoSparTA}}
 object. Intervals are computed under a normal approximation to the
 posterior, which is reasonable for elements with non-negligible PIP.
 For elements with low PIP (likely zero), intervals should be interpreted
@@ -37,7 +37,7 @@ cautiously.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 
 # 95\% credible intervals for observation loadings
 ci_L <- get_credible_interval(fit, mode = 'L', level = 0.95)

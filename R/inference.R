@@ -1,13 +1,13 @@
-#' Extract Posterior Inclusion Probabilities from a CxtEBTD fit
+#' Extract Posterior Inclusion Probabilities from a CoSparTA fit
 #'
 #' @description
 #' Extracts the posterior inclusion probability (PIP) matrices from a fitted
-#' \code{\link{CxtEBTD}} object. PIPs give the probability that each factor
+#' \code{\link{CoSparTA}} object. PIPs give the probability that each factor
 #' element is truly non-zero vs. noise, derived from the spike-and-slab prior.
 #' A PIP close to 1 indicates strong evidence for a non-zero loading; a PIP
 #' close to 0 indicates the loading is likely noise.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}}.
 #' @param mode Character string specifying which mode to extract:
 #'   \code{'L'} for observation loadings, \code{'F'} for time factors,
 #'   \code{'W'} for channel weights. Default \code{'L'}.
@@ -25,7 +25,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 #'
 #' # Raw PIP matrix for observation loadings
 #' pip_L <- get_pip(fit, mode = 'L')
@@ -61,17 +61,17 @@ get_pip <- function(fit, mode = 'L', threshold = NULL) {
 }
 
 
-#' Compute Credible Intervals from a CxtEBTD fit
+#' Compute Credible Intervals from a CoSparTA fit
 #'
 #' @description
 #' Computes approximate credible intervals for factor elements using the
-#' posterior mean and variance stored in a fitted \code{\link{CxtEBTD}}
+#' posterior mean and variance stored in a fitted \code{\link{CoSparTA}}
 #' object. Intervals are computed under a normal approximation to the
 #' posterior, which is reasonable for elements with non-negligible PIP.
 #' For elements with low PIP (likely zero), intervals should be interpreted
 #' cautiously.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}}.
 #' @param mode Character string specifying which mode to extract:
 #'   \code{'L'} for observation loadings, \code{'F'} for time factors,
 #'   \code{'W'} for channel weights. Default \code{'L'}.
@@ -90,7 +90,7 @@ get_pip <- function(fit, mode = 'L', threshold = NULL) {
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 #'
 #' # 95% credible intervals for observation loadings
 #' ci_L <- get_credible_interval(fit, mode = 'L', level = 0.95)
@@ -152,7 +152,7 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
 #' that the entry is truly zero. Algorithm 1 finds the largest discovery set
 #' such that the mean local-fdr does not exceed \code{alpha}.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}}.
 #' @param alpha Numeric FDR level in \code{(0, 1)}. Default \code{0.05}.
 #' @param mode Character string specifying which mode(s) to run discovery on:
 #'   \code{'F'} for time factors, \code{'W'} for channel weights, or
@@ -174,7 +174,7 @@ get_credible_interval <- function(fit, mode = 'L', level = 0.95) {
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 #'
 #' # Discover active channels and time points at 5% FDR
 #' patterns <- get_significant_patterns(fit, alpha = 0.05)
@@ -233,7 +233,7 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 }
 
 
-#' Compute Exact Posterior Quantiles from a CxtEBTD fit
+#' Compute Exact Posterior Quantiles from a CoSparTA fit
 #'
 #' @description
 #' Computes exact quantiles of the marginal posterior distribution for each
@@ -246,8 +246,8 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 #' \eqn{F_{\text{Gamma}}^{-1}\!\left((\tau - \hat\pi_i)\,/\,(1 - \hat\pi_i)\right)}
 #' where the gamma is parameterized by the posterior shape and rate.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
-#'   \code{\link{CxtEBTD_missing}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}} or
+#'   \code{\link{CoSparTA_missing}}.
 #' @param probs Numeric vector of probabilities in \code{[0, 1]} at which to
 #'   evaluate the quantile function. Default \code{c(0.025, 0.975)}.
 #' @param mode Character string specifying which mode to extract:
@@ -264,7 +264,7 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both') {
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 #'
 #' # 95% equal-tailed posterior intervals for observation loadings
 #' q_L <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = 'L')
@@ -332,7 +332,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'
 #' @description
 #' Computes confidence intervals for the covariate effect parameters
-#' \eqn{\gamma} estimated by \code{\link{CxtEBTD}}. Two methods are available:
+#' \eqn{\gamma} estimated by \code{\link{CoSparTA}}. Two methods are available:
 #'
 #' \describe{
 #'   \item{\code{"delta"}}{Fast asymptotic intervals based on the Hessian of
@@ -348,14 +348,14 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'     exploratory screening.}
 #'   \item{\code{"bootstrap"}}{Parametric bootstrap intervals. Generates
 #'     \code{B} synthetic tensors from the fitted Poisson rates, refits
-#'     \code{\link{CxtEBTD}} on each, and collects the bootstrap distribution
+#'     \code{\link{CoSparTA}} on each, and collects the bootstrap distribution
 #'     of \eqn{\gamma}. This correctly accounts for all sources of estimation
 #'     uncertainty (including uncertainty in F and W). Recommended for
 #'     publication-quality inference. Computationally expensive: requires
 #'     \code{B} full model refits.}
 #' }
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}}.
 #' @param method Character: \code{"delta"} or \code{"bootstrap"}.
 #'   Default \code{"bootstrap"}.
 #' @param level Numeric confidence level in \code{(0, 1)}. Default \code{0.95}.
@@ -377,7 +377,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'   bootstrap inference.
 #' @param verbose Logical. If \code{TRUE}, prints bootstrap progress.
 #'   Default \code{TRUE}.
-#' @param ... Additional arguments passed to \code{\link{CxtEBTD}} during
+#' @param ... Additional arguments passed to \code{\link{CoSparTA}} during
 #'   bootstrap refitting (e.g., \code{maxiter}, \code{init},
 #'   \code{convergence_criteria}).
 #'
@@ -398,7 +398,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov, maxiter = 50)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov, maxiter = 50)
 #'
 #' # Fast delta method (exploratory)
 #' ci_delta <- get_gamma_ci(fit, method = "delta")
@@ -409,7 +409,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L') {
 #'                          maxiter = 50, convergence_criteria = "ELBO")
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}},
+#' @seealso \code{\link{CoSparTA}},
 #'   \code{\link{ebpm_point_gamma_multiplier_covariates}}
 #' @export
 get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
@@ -528,7 +528,7 @@ get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
     }
 
     fit_star <- tryCatch(
-      do.call(CxtEBTD, c(list(X = X_star, K = K, Xcov = Xcov), extra_args)),
+      do.call(CoSparTA, c(list(X = X_star, K = K, Xcov = Xcov), extra_args)),
       error = function(e) {
         warning(sprintf("Bootstrap replicate %d failed: %s -- row filled with NA.", b,
                         conditionMessage(e)))

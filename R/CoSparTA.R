@@ -92,18 +92,18 @@
 #' Xcov <- matrix(rnorm(20 * 2), nrow = 20, ncol = 2)
 #'
 #' # Supervised decomposition with covariates
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov, maxiter = 50, verbose = FALSE)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov, maxiter = 50, verbose = FALSE)
 #' EL <- fit$res$ql$El   # 20 x 3 loading matrix
 #' EF <- fit$res$qf$Ef   # 12 x 3 factor matrix
 #' EW <- fit$res$qw$Ew   # 4 x 3 weight matrix
 #'
 #' # Unsupervised decomposition (no covariates)
-#' fit0 <- CxtEBTD(X, K = 3, Xcov = NULL, maxiter = 50, verbose = FALSE)
+#' fit0 <- CoSparTA(X, K = 3, Xcov = NULL, maxiter = 50, verbose = FALSE)
 #' }
 #'
 #' @export
 
-CxtEBTD = function(X,K,Xcov=NULL,
+CoSparTA = function(X,K,Xcov=NULL,
                                     lib_size = NULL,
                                     init = 'random_gamma',
                                     maxiter=100,

@@ -1,5 +1,5 @@
-Package: CxtEBTD
-Title: Covariate-aware Empirical Bayes Tensor Decomposition
+Package: CoSparTA
+Title: Covariate-Aware Sparse Tensor Analysis
 Version: 0.1.0
 Authors@R: c(
     person("Xinyuan", "Zhang", role = c("aut", "cre"),
@@ -7,7 +7,7 @@ Authors@R: c(
     person("Junhui", "Cai", role = "aut",
            email = "jcai2@nd.edu"))
 Description: Empirical Bayes Poisson tensor decomposition with
-  spike-and-slab priors and optional covariate integration.
+  spike-and-slab priors and optional covariate integration (CoSparTA).
 License: MIT + file LICENSE
 Imports:
   Matrix,

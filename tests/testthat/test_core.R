@@ -3,7 +3,7 @@
 # helper-sim.R which testthat sources automatically.
 
 test_that("A: unsupervised fit returns valid output", {
-  fit_A <- CxtEBTD(X_obs, K = 2, Xcov = NULL,
+  fit_A <- CoSparTA(X_obs, K = 2, Xcov = NULL,
                    init = 'random_gamma', maxiter = 30,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   norm_A <- normalize_factors(fit_A)
@@ -15,7 +15,7 @@ test_that("A: unsupervised fit returns valid output", {
 })
 
 test_that("B: supervised fit recovers gamma and returns PIP/variance", {
-  fit_B <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                    init = 'random_gamma', maxiter = 30,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   expect_false(is.null(fit_B$res$ql$Varl))
@@ -28,7 +28,7 @@ test_that("B: supervised fit recovers gamma and returns PIP/variance", {
 
 test_that("C: missing data fit and prediction work", {
   mask  <- generate_missing_mask(X_obs, missing_rate = 0.1, seed = 7)
-  fit_C <- CxtEBTD_missing(X = mask$X_obs, K = 2, obs_mask = mask$obs_mask,
+  fit_C <- CoSparTA_missing(X = mask$X_obs, K = 2, obs_mask = mask$obs_mask,
                             Xcov = X_cov, init = 'random_gamma', maxiter = 30,
                             verbose = FALSE)
   eval_C <- evaluate_missing_prediction(fit_C, mask)
@@ -38,7 +38,7 @@ test_that("C: missing data fit and prediction work", {
 })
 
 test_that("D: rank-specific covariates work correctly", {
-  fit_D <- CxtEBTD(X_obs, K = 2, Xcov = list(X_cov, NULL),
+  fit_D <- CoSparTA(X_obs, K = 2, Xcov = list(X_cov, NULL),
                    init = 'random_gamma', maxiter = 5,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   expect_equal(fit_D$res$gl[[1]]$type, "covariate_dependent")
@@ -47,7 +47,7 @@ test_that("D: rank-specific covariates work correctly", {
 })
 
 test_that("E: posterior quantiles are ordered correctly for L and W modes", {
-  fit_B <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                    init = 'random_gamma', maxiter = 30,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   q_L <- get_posterior_quantile(fit_B, probs = c(0.025, 0.5, 0.975), mode = 'L')
@@ -61,7 +61,7 @@ test_that("E: posterior quantiles are ordered correctly for L and W modes", {
 })
 
 test_that("F: normalize_factors returns unit-norm columns sorted by lambda", {
-  fit_B <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                    init = 'random_gamma', maxiter = 30,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   nf_B <- normalize_factors(fit_B)
@@ -80,7 +80,7 @@ test_that("F: normalize_factors returns unit-norm columns sorted by lambda", {
 })
 
 test_that("G: project_tensor returns correct dimensions", {
-  fit_B <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                    init = 'random_gamma', maxiter = 30,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   proj <- project_tensor(X_obs, fit_B, normalize = TRUE)
@@ -91,7 +91,7 @@ test_that("G: project_tensor returns correct dimensions", {
 })
 
 test_that("H: reconstruct_tensor returns non-negative array of correct size", {
-  fit_B <- CxtEBTD(X_obs, K = 2, Xcov = X_cov,
+  fit_B <- CoSparTA(X_obs, K = 2, Xcov = X_cov,
                    init = 'random_gamma', maxiter = 30,
                    convergence_criteria = 'factor_change', verbose = FALSE)
   recon <- reconstruct_tensor(fit_B)

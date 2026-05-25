@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // calc_EZ_3d_cpp
 List calc_EZ_3d_cpp(IntegerVector V1, IntegerVector V2, IntegerVector V3, NumericVector x_vals, NumericVector alpha_k, int n, int p, int w);
-RcppExport SEXP _CxtEBTD_calc_EZ_3d_cpp(SEXP V1SEXP, SEXP V2SEXP, SEXP V3SEXP, SEXP x_valsSEXP, SEXP alpha_kSEXP, SEXP nSEXP, SEXP pSEXP, SEXP wSEXP) {
+RcppExport SEXP _CoSparTA_calc_EZ_3d_cpp(SEXP V1SEXP, SEXP V2SEXP, SEXP V3SEXP, SEXP x_valsSEXP, SEXP alpha_kSEXP, SEXP nSEXP, SEXP pSEXP, SEXP wSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -30,7 +30,7 @@ END_RCPP
 }
 // calc_qz_sparse_cpp
 NumericMatrix calc_qz_sparse_cpp(IntegerVector V1, IntegerVector V2, IntegerVector V3, NumericMatrix Elogl, NumericMatrix Elogf, NumericMatrix Elogw);
-RcppExport SEXP _CxtEBTD_calc_qz_sparse_cpp(SEXP V1SEXP, SEXP V2SEXP, SEXP V3SEXP, SEXP EloglSEXP, SEXP ElogfSEXP, SEXP ElogwSEXP) {
+RcppExport SEXP _CoSparTA_calc_qz_sparse_cpp(SEXP V1SEXP, SEXP V2SEXP, SEXP V3SEXP, SEXP EloglSEXP, SEXP ElogfSEXP, SEXP ElogwSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -46,12 +46,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_CxtEBTD_calc_EZ_3d_cpp", (DL_FUNC) &_CxtEBTD_calc_EZ_3d_cpp, 8},
-    {"_CxtEBTD_calc_qz_sparse_cpp", (DL_FUNC) &_CxtEBTD_calc_qz_sparse_cpp, 6},
+    {"_CoSparTA_calc_EZ_3d_cpp", (DL_FUNC) &_CoSparTA_calc_EZ_3d_cpp, 8},
+    {"_CoSparTA_calc_qz_sparse_cpp", (DL_FUNC) &_CoSparTA_calc_qz_sparse_cpp, 6},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_CxtEBTD(DllInfo *dll) {
+RcppExport void R_init_CoSparTA(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

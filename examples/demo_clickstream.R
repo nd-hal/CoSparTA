@@ -1,11 +1,11 @@
 # =============================================================================
-# CxtEBTD — Clickstream Practical Demo
+# CoSparTA — Clickstream Practical Demo
 # Synthetic data generated from real comScore clickstream structure.
 # Tensor: 4000 sessions x 168 hours (last 7 days) x 141 channels
 # Covariates: gender, age, race, household income, education, children
 # =============================================================================
 
-library(CxtEBTD)
+library(CoSparTA)
 library(dplyr)
 library(readr)
 library(reticulate)
@@ -44,11 +44,11 @@ init_list <- init_cpapr(Xtensor, K = K, virtualenv = "cxtebtd_env",
                          method = "torch")
 
 # =============================================================================
-# STEP 3: Fit unsupervised CxtEBTD
+# STEP 3: Fit unsupervised CoSparTA
 # =============================================================================
-cat("\nFitting unsupervised CxtEBTD...\n")
+cat("\nFitting unsupervised CoSparTA...\n")
 st <- Sys.time()
-fit_ebtd <- CxtEBTD(
+fit_ebtd <- CoSparTA(
   X                    = Xtensor,
   K                    = K,
   Xcov                 = NULL,
@@ -77,12 +77,12 @@ Xcov_list <- lapply(result$selected, function(idx) {
 })
 
 # =============================================================================
-# STEP 5: Fit supervised CxtEBTD
+# STEP 5: Fit supervised CoSparTA
 # =============================================================================
-cat("\nFitting supervised CxtEBTD...\n")
+cat("\nFitting supervised CoSparTA...\n")
 init_list2 <- list(fit_ebtd_normed$El, fit_ebtd_normed$Ef, fit_ebtd_normed$Ew)
 st <- Sys.time()
-fit_cxtebtd <- CxtEBTD(
+fit_cxtebtd <- CoSparTA(
   X                    = Xtensor,
   K                    = K,
   Xcov                 = Xcov_list,

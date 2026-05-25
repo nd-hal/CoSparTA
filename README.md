@@ -1,8 +1,8 @@
-# CxtEBTD
+# CoSparTA
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An R package for **contextual empirical Bayes tensor decomposition** of sparse count tensors. CxtEBTD fits a Poisson CP decomposition with factor-specific spike-and-slab priors and incorporates observation-level covariates directly into the generative model, enabling simultaneous factor recovery, covariate effect estimation, and posterior uncertainty quantification.
+An R package for **contextual empirical Bayes tensor decomposition** of sparse count tensors. CoSparTA fits a Poisson CP decomposition with factor-specific spike-and-slab priors and incorporates observation-level covariates directly into the generative model, enabling simultaneous factor recovery, covariate effect estimation, and posterior uncertainty quantification.
 
 ## Installation
 
@@ -11,7 +11,7 @@ Two dependencies are hosted on GitHub and must be installed first:
 ```r
 devtools::install_github("DongyueXie/ebpm")
 devtools::install_github("DongyueXie/smashrgen")
-devtools::install_github("xzhang0407/CxtEBTD")
+devtools::install_github("xzhang0407/CoSparTA")
 ```
 
 ## Quick Start
@@ -28,7 +28,7 @@ Dimension labels can be supplied explicitly to ensure all time bins are
 retained even if some are unobserved.
 
 ```r
-library(CxtEBTD)
+library(CoSparTA)
 
 # Load bundled demo data
 df             <- readRDS("data/demo_df.rds")
@@ -60,7 +60,7 @@ X <- tensor_out$X
 
 ### Stage 2: Fit the model
 
-`CxtEBTD` is the main entry point. Supplying `Xcov` activates
+`CoSparTA` is the main entry point. Supplying `Xcov` activates
 covariate-dependent priors on the observation mode. An optional CP-APR
 warm-start is available via `init_cpapr` when Python is accessible.
 
@@ -72,7 +72,7 @@ init_vals <- tryCatch(
   error = function(e) "random_gamma"
 )
 
-fit <- CxtEBTD(
+fit <- CoSparTA(
   X                    = X,
   K                    = 4,
   Xcov                 = Xcov_mat,
@@ -93,13 +93,13 @@ Rank-specific covariate sets and missing data are also supported:
 
 ```r
 # Rank-specific covariates
-fit_rankspec <- CxtEBTD(X, K = 4,
+fit_rankspec <- CoSparTA(X, K = 4,
   Xcov = list(Xcov_mat, NULL, Xcov_mat[,1,drop=FALSE], Xcov_mat[,2,drop=FALSE]),
   init = init_vals, convergence_criteria = "ELBO")
 
 # Missing data
 mask     <- generate_missing_mask(X, missing_rate = 0.10)
-fit_miss <- CxtEBTD_missing(X, K = 4, Xcov = Xcov_mat,
+fit_miss <- CoSparTA_missing(X, K = 4, Xcov = Xcov_mat,
                              obs_mask = mask$obs_mask,
                              convergence_criteria = "ELBO")
 ```
@@ -122,7 +122,7 @@ print(ci_gamma[[1]])   # factor 1 results
 
 ```r
 # Fit covariate-free model, then screen covariates
-fit_unsup  <- CxtEBTD(X, K = 4, Xcov = NULL, init = init_vals,
+fit_unsup  <- CoSparTA(X, K = 4, Xcov = NULL, init = init_vals,
                        convergence_criteria = "ELBO")
 nf_unsup   <- normalize_factors(fit_unsup)
 sel        <- select_covariates(K = 4,

@@ -27,14 +27,14 @@ directly, \code{K} must equal \code{ncol(El)}.}
 candidate covariates to screen. Column names are used in the output if
 available.}
 
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
-\code{\link{CxtEBTD_missing}}. If supplied, \code{El} is extracted via
-\code{normalize_factors(fit)$El} and no internal \code{CxtEBTD} call is
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
+\code{\link{CoSparTA_missing}}. If supplied, \code{El} is extracted via
+\code{normalize_factors(fit)$El} and no internal \code{CoSparTA} call is
 made. Either \code{fit} or \code{El} or neither (with \code{X} and
 \code{K}) must be provided.}
 
 \item{El}{Numeric matrix of dimensions \code{n x K} (observation loading
-matrix). If provided, used directly — no \code{CxtEBTD} fit is run and
+matrix). If provided, used directly — no \code{CoSparTA} fit is run and
 \code{fit} is ignored.}
 
 \item{alpha}{Numeric significance level for covariate selection. Default
@@ -43,7 +43,7 @@ matrix). If provided, used directly — no \code{CxtEBTD} fit is run and
 \item{verbose}{Logical. If \code{TRUE}, prints progress and selected
 covariates per rank. Default \code{TRUE}.}
 
-\item{...}{Additional arguments passed to \code{\link{CxtEBTD}} when
+\item{...}{Additional arguments passed to \code{\link{CoSparTA}} when
 running the internal unsupervised fit (e.g., \code{init}, \code{maxiter},
 \code{tol}, \code{convergence_criteria}). Ignored when \code{fit} or
 \code{El} is supplied.}
@@ -58,32 +58,41 @@ A named list with:
   \item{summaries}{A list of length K. Each element is the \code{summary.lm}
     object from the OLS regression of El[,k] on \code{covariate_data}, giving
     full coefficient estimates, standard errors, t-statistics, and p-values.}
-  \item{fit_unsupervised}{The fitted unsupervised \code{\link{CxtEBTD}}
+  \item{fit_unsupervised}{The fitted unsupervised \code{\link{CoSparTA}}
     object when the internal fit was run, the supplied \code{fit} object when
     that was used, or \code{NULL} when \code{El} was provided directly.}
+  \item{runtime_secs}{Numeric scalar giving the total elapsed wall-clock time
+    of the function call in seconds.}
 }
 }
 \description{
 Identifies which covariates are relevant for each tensor component by
-regressing observation loadings on a candidate covariate matrix using OLS
-and selecting covariates whose coefficients are significant at level
-\code{alpha}. The loading matrix \eqn{E[l_{ik}]} can be supplied in three
-ways: (1) provide \code{El} directly, (2) provide a fitted \code{fit} object
-to extract \code{El} via \code{\link{normalize_factors}}, or (3) provide
-\code{X} and \code{K} so the function fits an unsupervised
-\code{\link{CxtEBTD}} internally (original two-step behaviour).
+filtering active (non-zero) observations per factor, regressing
+log-transformed loadings on a candidate covariate matrix using OLS, and
+selecting covariates whose coefficients are significant at level
+\code{alpha}. Zero loadings (spike/inactive observations) are excluded
+before regression to match the log-linear DGP structure
+\eqn{E[u \mid x] \propto \exp(x^\top \gamma)}. The loading matrix
+\eqn{E[l_{ik}]} can be supplied in three ways: (1) provide \code{El}
+directly, (2) provide a fitted \code{fit} object to extract \code{El} via
+\code{\link{normalize_factors}}, or (3) provide \code{X} and \code{K} so
+the function fits an unsupervised \code{\link{CoSparTA}} internally
+(original two-step behaviour).
 }
 \details{
 When running the internal unsupervised fit, \code{Xcov = NULL} is used and
-all \code{...} arguments are forwarded to \code{\link{CxtEBTD}}. The OLS
-regression for each component k is:
-\deqn{E[l_{ik}] = X_{\text{cov}} \beta_k + \epsilon_{ik}}
-Covariates are selected if their two-sided p-value is below \code{alpha}.
-The intercept is included in the regression but is never selected as a
-covariate (it is excluded from the returned indices).
+all \code{...} arguments are forwarded to \code{\link{CoSparTA}}. For each
+component k, rows with \eqn{l_{ik} = 0} (spike/inactive observations) are
+dropped, and OLS is applied to the log-transformed loadings of the remaining
+active rows:
+\deqn{\log E[l_{ik}] = X_{\text{cov},i} \beta_k + \epsilon_{ik}, \quad l_{ik} > 0}
+This matches the log-linear DGP structure of the generative model. Covariates
+are selected if their two-sided p-value is below \code{alpha}. The intercept
+is included in the regression but is never selected as a covariate (it is
+excluded from the returned indices).
 
 This is a screening procedure, not a formal statistical test. For rigorous
-inference on covariate effects, fit \code{\link{CxtEBTD}} with the selected
+inference on covariate effects, fit \code{\link{CoSparTA}} with the selected
 covariates and use the estimated \eqn{\gamma} coefficients from the
 generative model.
 }
@@ -98,7 +107,7 @@ result <- select_covariates(X, K = 3, covariate_data = Xcov,
                              maxiter = 20, convergence_criteria = 'ELBO')
 
 # Style 2: supply a fitted object
-fit <- CxtEBTD(X, K = 3)
+fit <- CoSparTA(X, K = 3)
 result2 <- select_covariates(X, K = 3, covariate_data = Xcov, fit = fit)
 
 # Style 3: supply El directly
@@ -113,10 +122,10 @@ result$summaries[[1]]
 
 # Refit with selected covariates for rank 1
 Xcov_selected <- Xcov[, result$selected[[1]], drop = FALSE]
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov_selected)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov_selected)
 }
 
 }
 \seealso{
-\code{\link{CxtEBTD}}, \code{\link{normalize_factors}}
+\code{\link{CoSparTA}}, \code{\link{normalize_factors}}
 }

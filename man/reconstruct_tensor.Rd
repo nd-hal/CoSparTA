@@ -2,13 +2,13 @@
 % Please edit documentation in R/postprocessing.R
 \name{reconstruct_tensor}
 \alias{reconstruct_tensor}
-\title{Reconstruct the Denoised Mean Tensor from a CxtEBTD fit}
+\title{Reconstruct the Denoised Mean Tensor from a CoSparTA fit}
 \usage{
 reconstruct_tensor(fit)
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
-\code{\link{CxtEBTD_missing}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
+\code{\link{CoSparTA_missing}}.}
 }
 \value{
 A numeric array of dimensions \code{n x p x w} containing the
@@ -18,7 +18,7 @@ A numeric array of dimensions \code{n x p x w} containing the
 Reconstructs the denoised Poisson mean tensor
 \eqn{\hat{X}[i,j,m] = \sum_{k=1}^{K} L_{ik} F_{jk} W_{mk}}
 from the raw (unnormalized) posterior mean factor matrices stored in a
-fitted \code{\link{CxtEBTD}} object. The result is the best rank-\code{K}
+fitted \code{\link{CoSparTA}} object. The result is the best rank-\code{K}
 approximation to the observed tensor under the fitted model.
 
 Implementation uses a loop over \code{K} components. For each \eqn{k} the
@@ -28,7 +28,7 @@ allocation of \code{K} separate \code{n x p x w} arrays.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3)
+fit <- CoSparTA(X, K = 3)
 
 X_hat <- reconstruct_tensor(fit)
 dim(X_hat)          # same as dim(X)
@@ -40,5 +40,5 @@ mean((X - X_hat)^2)
 }
 \seealso{
 \code{\link{normalize_factors}}, \code{\link{project_tensor}},
-  \code{\link{CxtEBTD}}
+  \code{\link{CoSparTA}}
 }

@@ -32,11 +32,11 @@ containing pyCP_APR. Default \code{'ebtd1'}.}
 \value{
 A list of three matrices \code{list(L, F, W)} with dimensions
   \code{n x K}, \code{p x K}, \code{w x K}, suitable for passing as the
-  \code{init} argument to \code{\link{CxtEBTD}} or \code{\link{CxtEBTD_missing}}.
+  \code{init} argument to \code{\link{CoSparTA}} or \code{\link{CoSparTA_missing}}.
 }
 \description{
 Computes non-negative CP-APR (Alternating Poisson Regression) factor matrices
-to use as warm-start initialization for \code{\link{CxtEBTD}}. Calls
+to use as warm-start initialization for \code{\link{CoSparTA}}. Calls
 \code{pyCP_APR} via \code{reticulate}, which requires Python 3.9+ with
 \code{pyCP_APR} and \code{numpy} installed.
 }
@@ -55,10 +55,10 @@ slices. pyCP_APR returns factor matrices with a zero-padded first row
 \dontrun{
 X <- array(rpois(100 * 20 * 10, lambda = 1.5), dim = c(100, 20, 10))
 init <- init_cpapr(X, K = 3)
-fit <- CxtEBTD(X, K = 3, init = init)
+fit <- CoSparTA(X, K = 3, init = init)
 }
 
 }
 \seealso{
-\code{\link{CxtEBTD}}
+\code{\link{CoSparTA}}
 }

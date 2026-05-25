@@ -1,4 +1,4 @@
-# Shared simulation setup for all CxtEBTD tests.
+# Shared simulation setup for all CoSparTA tests.
 # Sourced automatically by testthat before any test file runs.
 
 gen_U1_with_covariates <- function(n, X, gamma_true, pi0_true, alpha_true, beta_true, seed) {

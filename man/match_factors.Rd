@@ -52,7 +52,7 @@ matching algorithm with a warning.
 \dontrun{
 # Simulation: compare estimated to true factors
 sim <- simulate_tensor(n = 100, p = 20, w = 10, K = 3)
-fit <- CxtEBTD(sim$X, K = 3, Xcov = sim$Xcov)
+fit <- CoSparTA(sim$X, K = 3, Xcov = sim$Xcov)
 nf <- normalize_factors(fit)
 
 result <- match_factors(

@@ -70,7 +70,7 @@ so that the prior mean scales multiplicatively with covariates. Prior
 parameters \eqn{(\pi_0, \alpha, \beta, \gamma)} are estimated by maximizing
 the marginal likelihood via \code{nlm} (with \code{optim} as fallback).
 This function is the core building block of the covariate-aware mode update
-in \code{\link{CxtEBTD}}.
+in \code{\link{CoSparTA}}.
 }
 \examples{
 \dontrun{
@@ -88,5 +88,5 @@ head(fit$posterior)    # posterior means and log-means
 
 }
 \seealso{
-\code{\link{CxtEBTD}}, \code{\link[ebpm]{ebpm_point_gamma}}
+\code{\link{CoSparTA}}, \code{\link[ebpm]{ebpm_point_gamma}}
 }

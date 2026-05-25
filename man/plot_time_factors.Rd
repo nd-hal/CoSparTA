@@ -16,7 +16,7 @@ plot_time_factors(
 )
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}. Either
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}}. Either
 \code{fit} or \code{Ef} must be supplied.}
 
 \item{ranks}{Integer vector specifying which components to plot. Default
@@ -48,11 +48,11 @@ A \code{ggplot} object.
 \description{
 Produces a faceted line plot of the time-mode factor matrix (Ef), with one
 panel per component. Useful for visualizing temporal patterns learned by
-\code{\link{CxtEBTD}}.
+\code{\link{CoSparTA}}.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 plot_time_factors(fit)
 plot_time_factors(fit, ranks = c(1, 3), time_labels = seq(0, 600, length.out = 20))
 

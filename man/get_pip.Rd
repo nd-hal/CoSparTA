@@ -2,12 +2,12 @@
 % Please edit documentation in R/inference.R
 \name{get_pip}
 \alias{get_pip}
-\title{Extract Posterior Inclusion Probabilities from a CxtEBTD fit}
+\title{Extract Posterior Inclusion Probabilities from a CoSparTA fit}
 \usage{
 get_pip(fit, mode = "L", threshold = NULL)
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
 
 \item{mode}{Character string specifying which mode to extract:
 \code{'L'} for observation loadings, \code{'F'} for time factors,
@@ -28,14 +28,14 @@ If \code{threshold = NULL}, a numeric matrix of PIPs with the same
 }
 \description{
 Extracts the posterior inclusion probability (PIP) matrices from a fitted
-\code{\link{CxtEBTD}} object. PIPs give the probability that each factor
+\code{\link{CoSparTA}} object. PIPs give the probability that each factor
 element is truly non-zero vs. noise, derived from the spike-and-slab prior.
 A PIP close to 1 indicates strong evidence for a non-zero loading; a PIP
 close to 0 indicates the loading is likely noise.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 
 # Raw PIP matrix for observation loadings
 pip_L <- get_pip(fit, mode = 'L')

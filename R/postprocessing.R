@@ -1,15 +1,15 @@
-#' Normalize and Sort Components of a CxtEBTD fit
+#' Normalize and Sort Components of a CoSparTA fit
 #'
 #' @description
-#' Extracts the factor matrices from a fitted \code{\link{CxtEBTD}} object,
+#' Extracts the factor matrices from a fitted \code{\link{CoSparTA}} object,
 #' normalizes each column to unit Frobenius norm, computes a per-component
 #' weight \eqn{\lambda_k = \|\mathbf{l}_k\| \|\mathbf{f}_k\| \|\mathbf{w}_k\|},
 #' and returns components sorted by \eqn{\lambda} descending. This is the
 #' canonical form for comparing decompositions and for downstream use with
 #' \code{project_tensor} and \code{reconstruct_tensor}.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
-#'   \code{\link{CxtEBTD_missing}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}} or
+#'   \code{\link{CoSparTA_missing}}.
 #'
 #' @return A named list with:
 #' \describe{
@@ -34,12 +34,12 @@
 #'     to match the normalized factor ordering.}
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}, \code{\link{project_tensor}},
+#' @seealso \code{\link{CoSparTA}}, \code{\link{project_tensor}},
 #'   \code{\link{reconstruct_tensor}}
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 #'
 #' norm_fit <- normalize_factors(fit)
 #' norm_fit$lambda   # component weights, descending
@@ -99,7 +99,7 @@ normalize_factors <- function(fit) {
 #' Project a New Tensor onto the Learned Factor Space
 #'
 #' @description
-#' Given a fitted \code{\link{CxtEBTD}} object (or raw factor matrices),
+#' Given a fitted \code{\link{CoSparTA}} object (or raw factor matrices),
 #' projects one or more new observations onto the learned factor space to
 #' produce a loading matrix. Each observation is a \code{p x w} count slice;
 #' the function recovers the \code{K}-dimensional representation without
@@ -123,8 +123,8 @@ normalize_factors <- function(fit) {
 #'   observation). In the latter case the input is wrapped as
 #'   \code{array(X_new, dim = c(1, p, w))} and a length-\code{K} vector is
 #'   returned instead of a \code{1 x K} matrix.
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
-#'   \code{\link{CxtEBTD_missing}}. Either \code{fit} or all of \code{Ef},
+#' @param fit A fitted object returned by \code{\link{CoSparTA}} or
+#'   \code{\link{CoSparTA_missing}}. Either \code{fit} or all of \code{Ef},
 #'   \code{Ew}, and \code{lambda} must be supplied.
 #' @param normalize Logical. If \code{TRUE} (default) and \code{fit} is
 #'   supplied, calls \code{\link{normalize_factors}} so that factor columns have
@@ -145,11 +145,11 @@ normalize_factors <- function(fit) {
 #'   numeric vector of length \code{K}.
 #'
 #' @seealso \code{\link{normalize_factors}}, \code{\link{reconstruct_tensor}},
-#'   \code{\link{CxtEBTD}}
+#'   \code{\link{CoSparTA}}
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X_train, K = 3)
+#' fit <- CoSparTA(X_train, K = 3)
 #'
 #' # Project a batch of new observations (50 x p x w array)
 #' L_new <- project_tensor(X_new, fit)          # 50 x 3 matrix
@@ -235,13 +235,13 @@ project_tensor <- function(X_new, fit = NULL, normalize = TRUE,
 }
 
 
-#' Reconstruct the Denoised Mean Tensor from a CxtEBTD fit
+#' Reconstruct the Denoised Mean Tensor from a CoSparTA fit
 #'
 #' @description
 #' Reconstructs the denoised Poisson mean tensor
 #' \eqn{\hat{X}[i,j,m] = \sum_{k=1}^{K} L_{ik} F_{jk} W_{mk}}
 #' from the raw (unnormalized) posterior mean factor matrices stored in a
-#' fitted \code{\link{CxtEBTD}} object. The result is the best rank-\code{K}
+#' fitted \code{\link{CoSparTA}} object. The result is the best rank-\code{K}
 #' approximation to the observed tensor under the fitted model.
 #'
 #' Implementation uses a loop over \code{K} components. For each \eqn{k} the
@@ -249,18 +249,18 @@ project_tensor <- function(X_new, fit = NULL, normalize = TRUE,
 #' is added to the accumulator via \code{tcrossprod} and a sweep, avoiding
 #' allocation of \code{K} separate \code{n x p x w} arrays.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
-#'   \code{\link{CxtEBTD_missing}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA}} or
+#'   \code{\link{CoSparTA_missing}}.
 #'
 #' @return A numeric array of dimensions \code{n x p x w} containing the
 #'   reconstructed denoised mean tensor \eqn{\hat{X}}.
 #'
 #' @seealso \code{\link{normalize_factors}}, \code{\link{project_tensor}},
-#'   \code{\link{CxtEBTD}}
+#'   \code{\link{CoSparTA}}
 #'
 #' @examples
 #' \dontrun{
-#' fit <- CxtEBTD(X, K = 3)
+#' fit <- CoSparTA(X, K = 3)
 #'
 #' X_hat <- reconstruct_tensor(fit)
 #' dim(X_hat)          # same as dim(X)
@@ -297,7 +297,7 @@ reconstruct_tensor <- function(fit) {
 #'
 #' @description
 #' Computes non-negative CP-APR (Alternating Poisson Regression) factor matrices
-#' to use as warm-start initialization for \code{\link{CxtEBTD}}. Calls
+#' to use as warm-start initialization for \code{\link{CoSparTA}}. Calls
 #' \code{pyCP_APR} via \code{reticulate}, which requires Python 3.9+ with
 #' \code{pyCP_APR} and \code{numpy} installed.
 #'
@@ -313,7 +313,7 @@ reconstruct_tensor <- function(fit) {
 #'
 #' @return A list of three matrices \code{list(L, F, W)} with dimensions
 #'   \code{n x K}, \code{p x K}, \code{w x K}, suitable for passing as the
-#'   \code{init} argument to \code{\link{CxtEBTD}} or \code{\link{CxtEBTD_missing}}.
+#'   \code{init} argument to \code{\link{CoSparTA}} or \code{\link{CoSparTA_missing}}.
 #'
 #' @details
 #' Requires the \code{reticulate} R package and a Python environment with
@@ -330,10 +330,10 @@ reconstruct_tensor <- function(fit) {
 #' \dontrun{
 #' X <- array(rpois(100 * 20 * 10, lambda = 1.5), dim = c(100, 20, 10))
 #' init <- init_cpapr(X, K = 3)
-#' fit <- CxtEBTD(X, K = 3, init = init)
+#' fit <- CoSparTA(X, K = 3, init = init)
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}
+#' @seealso \code{\link{CoSparTA}}
 #'
 #' @export
 init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
@@ -401,7 +401,7 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #' \eqn{E[l_{ik}]} can be supplied in three ways: (1) provide \code{El}
 #' directly, (2) provide a fitted \code{fit} object to extract \code{El} via
 #' \code{\link{normalize_factors}}, or (3) provide \code{X} and \code{K} so
-#' the function fits an unsupervised \code{\link{CxtEBTD}} internally
+#' the function fits an unsupervised \code{\link{CoSparTA}} internally
 #' (original two-step behaviour).
 #'
 #' @param X A 3-dimensional non-negative integer array of dimensions
@@ -412,19 +412,19 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #' @param covariate_data Numeric matrix of dimension \code{n x q} containing
 #'   candidate covariates to screen. Column names are used in the output if
 #'   available.
-#' @param fit A fitted object returned by \code{\link{CxtEBTD}} or
-#'   \code{\link{CxtEBTD_missing}}. If supplied, \code{El} is extracted via
-#'   \code{normalize_factors(fit)$El} and no internal \code{CxtEBTD} call is
+#' @param fit A fitted object returned by \code{\link{CoSparTA}} or
+#'   \code{\link{CoSparTA_missing}}. If supplied, \code{El} is extracted via
+#'   \code{normalize_factors(fit)$El} and no internal \code{CoSparTA} call is
 #'   made. Either \code{fit} or \code{El} or neither (with \code{X} and
 #'   \code{K}) must be provided.
 #' @param El Numeric matrix of dimensions \code{n x K} (observation loading
-#'   matrix). If provided, used directly — no \code{CxtEBTD} fit is run and
+#'   matrix). If provided, used directly — no \code{CoSparTA} fit is run and
 #'   \code{fit} is ignored.
 #' @param alpha Numeric significance level for covariate selection. Default
 #'   \code{0.05}.
 #' @param verbose Logical. If \code{TRUE}, prints progress and selected
 #'   covariates per rank. Default \code{TRUE}.
-#' @param ... Additional arguments passed to \code{\link{CxtEBTD}} when
+#' @param ... Additional arguments passed to \code{\link{CoSparTA}} when
 #'   running the internal unsupervised fit (e.g., \code{init}, \code{maxiter},
 #'   \code{tol}, \code{convergence_criteria}). Ignored when \code{fit} or
 #'   \code{El} is supplied.
@@ -438,7 +438,7 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'   \item{summaries}{A list of length K. Each element is the \code{summary.lm}
 #'     object from the OLS regression of El[,k] on \code{covariate_data}, giving
 #'     full coefficient estimates, standard errors, t-statistics, and p-values.}
-#'   \item{fit_unsupervised}{The fitted unsupervised \code{\link{CxtEBTD}}
+#'   \item{fit_unsupervised}{The fitted unsupervised \code{\link{CoSparTA}}
 #'     object when the internal fit was run, the supplied \code{fit} object when
 #'     that was used, or \code{NULL} when \code{El} was provided directly.}
 #'   \item{runtime_secs}{Numeric scalar giving the total elapsed wall-clock time
@@ -447,7 +447,7 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'
 #' @details
 #' When running the internal unsupervised fit, \code{Xcov = NULL} is used and
-#' all \code{...} arguments are forwarded to \code{\link{CxtEBTD}}. For each
+#' all \code{...} arguments are forwarded to \code{\link{CoSparTA}}. For each
 #' component k, rows with \eqn{l_{ik} = 0} (spike/inactive observations) are
 #' dropped, and OLS is applied to the log-transformed loadings of the remaining
 #' active rows:
@@ -458,7 +458,7 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #' excluded from the returned indices).
 #'
 #' This is a screening procedure, not a formal statistical test. For rigorous
-#' inference on covariate effects, fit \code{\link{CxtEBTD}} with the selected
+#' inference on covariate effects, fit \code{\link{CoSparTA}} with the selected
 #' covariates and use the estimated \eqn{\gamma} coefficients from the
 #' generative model.
 #'
@@ -473,7 +473,7 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'                              maxiter = 20, convergence_criteria = 'ELBO')
 #'
 #' # Style 2: supply a fitted object
-#' fit <- CxtEBTD(X, K = 3)
+#' fit <- CoSparTA(X, K = 3)
 #' result2 <- select_covariates(X, K = 3, covariate_data = Xcov, fit = fit)
 #'
 #' # Style 3: supply El directly
@@ -488,10 +488,10 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'
 #' # Refit with selected covariates for rank 1
 #' Xcov_selected <- Xcov[, result$selected[[1]], drop = FALSE]
-#' fit <- CxtEBTD(X, K = 3, Xcov = Xcov_selected)
+#' fit <- CoSparTA(X, K = 3, Xcov = Xcov_selected)
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}, \code{\link{normalize_factors}}
+#' @seealso \code{\link{CoSparTA}}, \code{\link{normalize_factors}}
 #' @export
 select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL,
                                alpha = 0.05, verbose = TRUE, ...) {
@@ -510,8 +510,8 @@ select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL
     fit_unsup <- fit
   } else {
     # Step 1: unsupervised decomposition
-    if (verbose) cat("Step 1: fitting unsupervised CxtEBTD (K =", K, ")...\n")
-    fit_unsup <- CxtEBTD(X, K = K, Xcov = NULL, ...)
+    if (verbose) cat("Step 1: fitting unsupervised CoSparTA (K =", K, ")...\n")
+    fit_unsup <- CoSparTA(X, K = K, Xcov = NULL, ...)
     El        <- fit_unsup$res$ql$El  # n x K
   }
 
@@ -605,7 +605,7 @@ select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL
 #' \dontrun{
 #' # Simulation: compare estimated to true factors
 #' sim <- simulate_tensor(n = 100, p = 20, w = 10, K = 3)
-#' fit <- CxtEBTD(sim$X, K = 3, Xcov = sim$Xcov)
+#' fit <- CoSparTA(sim$X, K = 3, Xcov = sim$Xcov)
 #' nf <- normalize_factors(fit)
 #'
 #' result <- match_factors(
@@ -742,14 +742,14 @@ match_factors <- function(ref, est, absolute_value = TRUE) {
 #' \dontrun{
 #' # Supervised simulation
 #' sim <- simulate_tensor(n = 100, p = 20, w = 10, K = 3)
-#' fit <- CxtEBTD(sim$X, K = 3, Xcov = sim$Xcov)
+#' fit <- CoSparTA(sim$X, K = 3, Xcov = sim$Xcov)
 #'
 #' # Unsupervised simulation
 #' sim0 <- simulate_tensor(n = 100, p = 20, w = 10, K = 2, gamma_true = FALSE)
-#' fit0 <- CxtEBTD(sim0$X, K = 2)
+#' fit0 <- CoSparTA(sim0$X, K = 2)
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}, \code{\link{match_factors}}
+#' @seealso \code{\link{CoSparTA}}, \code{\link{match_factors}}
 #' @export
 simulate_tensor <- function(n = 100, p = 20, w = 10, K = 3,
                              Xcov = NULL, gamma_true = NULL,

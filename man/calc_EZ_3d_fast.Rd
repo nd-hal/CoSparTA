@@ -27,6 +27,6 @@ Named list with \code{rs} (length n), \code{cs} (length p),
 Thin R wrapper around \code{\link{calc_EZ_3d_cpp}} that accepts the same
 sparse coordinate-format data.table \code{x} used by \code{calc_EZ_3d()},
 making the Rcpp replacement a drop-in at the call site in
-\code{CxtEBTD()} and \code{CxtEBTD_missing()}.
+\code{CoSparTA()} and \code{CoSparTA_missing()}.
 }
 \keyword{internal}

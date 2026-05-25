@@ -84,11 +84,11 @@ generate_missing_mask <- function(X, missing_rate = 0.1, seed = NULL) {
 #'
 #' @description
 #' Computes prediction metrics for held-out entries after fitting
-#' \code{\link{CxtEBTD_missing}}. Reconstructs the predicted Poisson rate
+#' \code{\link{CoSparTA_missing}}. Reconstructs the predicted Poisson rate
 #' at masked positions using the fitted factor matrices and compares against
 #' the true values.
 #'
-#' @param fit A fitted object returned by \code{\link{CxtEBTD_missing}}.
+#' @param fit A fitted object returned by \code{\link{CoSparTA_missing}}.
 #' @param missing_info Output from \code{\link{generate_missing_mask}}.
 #'
 #' @return A named list with:
@@ -105,7 +105,7 @@ generate_missing_mask <- function(X, missing_rate = 0.1, seed = NULL) {
 #' \dontrun{
 #' X <- array(rpois(20 * 12 * 4, lambda = 1.5), dim = c(20, 12, 4))
 #' mask_info <- generate_missing_mask(X, missing_rate = 0.1, seed = 42)
-#' fit <- CxtEBTD_missing(mask_info$X_obs, K = 3,
+#' fit <- CoSparTA_missing(mask_info$X_obs, K = 3,
 #'                         obs_mask = mask_info$obs_mask)
 #' metrics <- evaluate_missing_prediction(fit, mask_info)
 #' }
@@ -158,11 +158,11 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' Covariate-aware Empirical Bayes Tensor Decomposition with Missing Data
 #'
 #' @description
-#' Extends \code{\link{CxtEBTD}} to handle tensors with missing entries.
+#' Extends \code{\link{CoSparTA}} to handle tensors with missing entries.
 #' Missing entries are excluded from the likelihood and the ELBO, and
 #' per-observation scales are computed using only observed entries for each
 #' mode. The generative model and priors are identical to
-#' \code{\link{CxtEBTD}}.
+#' \code{\link{CoSparTA}}.
 #'
 #' @param X A 3-dimensional non-negative integer array of dimensions
 #'   \code{n x p x w}. May contain \code{NA} for missing entries.
@@ -202,13 +202,13 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' @param U2_true Optional true F matrix for simulation evaluation.
 #' @param U3_true Optional true W matrix for simulation evaluation.
 #'
-#' @return Same structure as \code{\link{CxtEBTD}} with one additional field:
+#' @return Same structure as \code{\link{CoSparTA}} with one additional field:
 #' \describe{
 #'   \item{obs_structure}{Internal observation structure used during fitting,
 #'     required by \code{\link{evaluate_missing_prediction}}.}
 #' }
 #'
-#' @seealso \code{\link{CxtEBTD}}, \code{\link{generate_missing_mask}},
+#' @seealso \code{\link{CoSparTA}}, \code{\link{generate_missing_mask}},
 #'   \code{\link{evaluate_missing_prediction}}
 #'
 #' @examples
@@ -219,16 +219,16 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #'
 #' # With covariates
 #' Xcov <- matrix(rnorm(20 * 2), nrow = 20)
-#' fit <- CxtEBTD_missing(mask_info$X_obs, K = 3, Xcov = Xcov,
+#' fit <- CoSparTA_missing(mask_info$X_obs, K = 3, Xcov = Xcov,
 #'                         obs_mask = mask_info$obs_mask)
 #'
 #' # Without covariates
-#' fit0 <- CxtEBTD_missing(mask_info$X_obs, K = 3,
+#' fit0 <- CoSparTA_missing(mask_info$X_obs, K = 3,
 #'                          obs_mask = mask_info$obs_mask)
 #' }
 #'
 #' @export
-CxtEBTD_missing <- function(X, K, Xcov = NULL,
+CoSparTA_missing <- function(X, K, Xcov = NULL,
                              obs_mask = NULL,
                              lib_size = NULL,
                              init = 'random_gamma',

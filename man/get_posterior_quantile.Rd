@@ -2,13 +2,13 @@
 % Please edit documentation in R/inference.R
 \name{get_posterior_quantile}
 \alias{get_posterior_quantile}
-\title{Compute Exact Posterior Quantiles from a CxtEBTD fit}
+\title{Compute Exact Posterior Quantiles from a CoSparTA fit}
 \usage{
 get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "L")
 }
 \arguments{
-\item{fit}{A fitted object returned by \code{\link{CxtEBTD}} or
-\code{\link{CxtEBTD_missing}}.}
+\item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
+\code{\link{CoSparTA_missing}}.}
 
 \item{probs}{Numeric vector of probabilities in \code{[0, 1]} at which to
 evaluate the quantile function. Default \code{c(0.025, 0.975)}.}
@@ -37,7 +37,7 @@ where the gamma is parameterized by the posterior shape and rate.
 }
 \examples{
 \dontrun{
-fit <- CxtEBTD(X, K = 3, Xcov = Xcov)
+fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 
 # 95\% equal-tailed posterior intervals for observation loadings
 q_L <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = 'L')
