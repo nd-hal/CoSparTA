@@ -392,13 +392,17 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'
 #' @description
 #' Identifies which covariates are relevant for each tensor component by
-#' regressing observation loadings on a candidate covariate matrix using OLS
-#' and selecting covariates whose coefficients are significant at level
-#' \code{alpha}. The loading matrix \eqn{E[l_{ik}]} can be supplied in three
-#' ways: (1) provide \code{El} directly, (2) provide a fitted \code{fit} object
-#' to extract \code{El} via \code{\link{normalize_factors}}, or (3) provide
-#' \code{X} and \code{K} so the function fits an unsupervised
-#' \code{\link{CxtEBTD}} internally (original two-step behaviour).
+#' filtering active (non-zero) observations per factor, regressing
+#' log-transformed loadings on a candidate covariate matrix using OLS, and
+#' selecting covariates whose coefficients are significant at level
+#' \code{alpha}. Zero loadings (spike/inactive observations) are excluded
+#' before regression to match the log-linear DGP structure
+#' \eqn{E[u \mid x] \propto \exp(x^\top \gamma)}. The loading matrix
+#' \eqn{E[l_{ik}]} can be supplied in three ways: (1) provide \code{El}
+#' directly, (2) provide a fitted \code{fit} object to extract \code{El} via
+#' \code{\link{normalize_factors}}, or (3) provide \code{X} and \code{K} so
+#' the function fits an unsupervised \code{\link{CxtEBTD}} internally
+#' (original two-step behaviour).
 #'
 #' @param X A 3-dimensional non-negative integer array of dimensions
 #'   \code{n x p x w}. Required when neither \code{fit} nor \code{El} is
@@ -437,16 +441,21 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 #'   \item{fit_unsupervised}{The fitted unsupervised \code{\link{CxtEBTD}}
 #'     object when the internal fit was run, the supplied \code{fit} object when
 #'     that was used, or \code{NULL} when \code{El} was provided directly.}
+#'   \item{runtime_secs}{Numeric scalar giving the total elapsed wall-clock time
+#'     of the function call in seconds.}
 #' }
 #'
 #' @details
 #' When running the internal unsupervised fit, \code{Xcov = NULL} is used and
-#' all \code{...} arguments are forwarded to \code{\link{CxtEBTD}}. The OLS
-#' regression for each component k is:
-#' \deqn{E[l_{ik}] = X_{\text{cov}} \beta_k + \epsilon_{ik}}
-#' Covariates are selected if their two-sided p-value is below \code{alpha}.
-#' The intercept is included in the regression but is never selected as a
-#' covariate (it is excluded from the returned indices).
+#' all \code{...} arguments are forwarded to \code{\link{CxtEBTD}}. For each
+#' component k, rows with \eqn{l_{ik} = 0} (spike/inactive observations) are
+#' dropped, and OLS is applied to the log-transformed loadings of the remaining
+#' active rows:
+#' \deqn{\log E[l_{ik}] = X_{\text{cov},i} \beta_k + \epsilon_{ik}, \quad l_{ik} > 0}
+#' This matches the log-linear DGP structure of the generative model. Covariates
+#' are selected if their two-sided p-value is below \code{alpha}. The intercept
+#' is included in the regression but is never selected as a covariate (it is
+#' excluded from the returned indices).
 #'
 #' This is a screening procedure, not a formal statistical test. For rigorous
 #' inference on covariate effects, fit \code{\link{CxtEBTD}} with the selected
@@ -487,6 +496,8 @@ init_cpapr <- function(X, K, n_iters = 150, method = 'torch',
 select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL,
                                alpha = 0.05, verbose = TRUE, ...) {
 
+  start_time <- Sys.time()
+
   # Resolve El
   if (!is.null(El)) {
     if (ncol(El) != K) {
@@ -510,11 +521,16 @@ select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL
   selected_list <- vector("list", K)
   summary_list  <- vector("list", K)
 
-  # Step 2: OLS regression of El[,k] on covariate_data for each component
+  # Step 2: OLS regression of log(El[,k]) on covariate_data for active rows
   for (k in seq_len(K)) {
     if (verbose) cat(sprintf("Step 2: screening covariates for rank %d...\n", k))
 
-    lm_fit  <- lm(El[, k] ~ ., data = as.data.frame(covariate_data))
+    # Filter to active (non-zero) observations; zero loadings are spike/inactive
+    active_idx <- which(El[, k] > 0)
+    loading_k  <- El[active_idx, k]
+    cov_k      <- covariate_data[active_idx, , drop = FALSE]
+
+    lm_fit  <- lm(log(loading_k) ~ ., data = as.data.frame(cov_k))
     lm_summ <- summary(lm_fit)
 
     # p-values for all coefficients; row 1 is the intercept — skip it
@@ -539,7 +555,8 @@ select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL
   list(
     selected         = selected_list,
     summaries        = summary_list,
-    fit_unsupervised = fit_unsup
+    fit_unsupervised = fit_unsup,
+    runtime_secs     = as.numeric(difftime(Sys.time(), start_time, units = "secs"))
   )
 }
 
