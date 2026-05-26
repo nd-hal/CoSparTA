@@ -66,9 +66,9 @@ warm-start is available via `init_cpapr` when Python is accessible.
 
 ```r
 # Optional CP-APR warm-start (requires Python 3.9+ with pyCP_APR)
-# use_virtualenv("cxtebtd_env", required = TRUE)
+# use_virtualenv("cosparta_env", required = TRUE)
 init_vals <- tryCatch(
-  init_cpapr(X, K = 4, virtualenv = "cxtebtd_env"),
+  init_cpapr(X, K = 4, virtualenv = "cosparta_env"),
   error = function(e) "random_gamma"
 )
 
@@ -127,7 +127,7 @@ fit_unsup <- CoSparTA(X, K = 4, Xcov = NULL, init = init_vals,
                       convergence_criteria = "ELBO")
 sel <- select_covariates(K = 4,
                          covariate_data = as.data.frame(Xcov_mat),
-                         El = get_loadings(fit_unsup, "U1"))
+                         fit = fit_unsup)
 sel$selected   # list of selected covariate names per factor
 ```
 

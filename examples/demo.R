@@ -55,10 +55,10 @@ cat("Sparsity:  ", round(mean(X == 0), 4), "\n")
 
 # Optional CP-APR warm-start
 # Requires a Python 3.9 virtual environment with pyCP_APR and numpy:
-#   python3.9 -m venv cxtebtd_env
-#   source cxtebtd_env/bin/activate        # Mac/Linux
+#   python3.9 -m venv cosparta_env
+#   source cosparta_env/bin/activate        # Mac/Linux
 #   pip install pyCP_APR numpy
-init_vals <- init_cpapr(X, K = 4, virtualenv = "cxtebtd_env")
+init_vals <- init_cpapr(X, K = 4, virtualenv = "cosparta_env")
 
 # Supervised fit: shared covariate matrix across all factors
 fit <- CoSparTA(
@@ -71,11 +71,11 @@ fit <- CoSparTA(
   tol                  = 1e-6,
   verbose              = TRUE
 )
-# Key outputs:
-# fit$res$ql$El   -- 1000 x 4 posterior mean loadings (U1)
-# fit$res$qf$Ef   -- 100  x 4 time factors            (U2)
-# fit$res$qw$Ew   -- 50   x 4 channel weights         (U3)
-# fit$res$gl      -- list of K covariate coefficient vectors
+# Key outputs via the unified getter (normalized and sorted by lambda by default):
+# get_loadings(fit, "U1")     -- 1000 x 4 observation loadings
+# get_loadings(fit, "U2")     -- 100  x 4 time factors
+# get_loadings(fit, "U3")     -- 50   x 4 channel weights
+# get_loadings(fit, "gamma")  -- list of K covariate coefficient vectors
 
 # Rank-specific covariate list: both covariates, NULL, cov1 only, cov2 only
 Xcov_cov1 <- Xcov_mat[, 1, drop = FALSE]
@@ -127,7 +127,7 @@ cat("Session mode 95% CI computed for",
     ncol(ci_l$q2.5), "factors\n")
 
 # Delta-method CIs for covariate coefficients
-ci_gamma <- get_gamma_ci(fit, method = "delta", level = 0.95)
+ci_gamma <- get_gamma_ci(fit, level = 0.95)
 print(ci_gamma[[1]])   # factor 1 results
 
 # =============================================================================
@@ -146,12 +146,11 @@ fit_unsup <- CoSparTA(
   verbose              = FALSE
 )
 
-# Normalize and screen covariates
-nf_unsup <- normalize_factors(fit_unsup)
+# Screen covariates: pass fit directly; normalized loadings are read internally
 sel <- select_covariates(
   K              = 4,
   covariate_data = as.data.frame(Xcov_mat),
-  El             = nf_unsup$El
+  fit            = fit_unsup
 )
 print(sel$selected)
 
@@ -159,9 +158,8 @@ print(sel$selected)
 # STEP 5: Post-processing
 # =============================================================================
 
-# Normalize to unit norm, sort by weight lambda
-nf <- normalize_factors(fit)
-cat("Lambda (weights):", round(nf$lambda, 3), "\n")
+# Factor weights (normalized, sorted descending by lambda)
+cat("Lambda (weights):", round(get_loadings(fit, "weight"), 3), "\n")
 
 # Project new observations onto the factor space (no refit)
 X_new <- X[991:1000, , ]   # held-out sessions for illustration
@@ -177,15 +175,11 @@ cat("Any negative values:      ", any(X_hat < 0), "\n")
 # STEP 6: Visualization
 # =============================================================================
 
-# Faceted line plot of K time factors
-plot_time_factors(
-  Ef          = nf$Ef,
-  time_labels = 1:100
-)
+# Faceted line plot of K time factors (reads fit$res$qf$Ef_normed by default)
+plot_time_factors(fit, time_labels = 1:100)
 
 # Faceted bar plot of K channel factors with category grouping
-plot_channel_factors(
-  Ew             = nf$Ew,
+plot_channel_factors(fit,
   channel_names  = website_names,
   channel_groups = channel_groups
 )

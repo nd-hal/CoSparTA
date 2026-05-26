@@ -605,8 +605,8 @@ select_covariates <- function(X = NULL, K, covariate_data, fit = NULL, El = NULL
     }
     fit_unsup <- NULL
   } else if (!is.null(fit)) {
-    if (verbose) cat("Extracting El from fit via normalize_factors()...\n")
-    El        <- normalize_factors(fit)$El
+    if (verbose) cat("Extracting El from fit...\n")
+    El        <- fit$res$ql$El_normed
     fit_unsup <- fit
   } else {
     # Step 1: unsupervised decomposition

@@ -17,11 +17,11 @@ library(ggh4x)
 # =============================================================================
 # Python setup (required for CP-APR warm start)
 # Requires Python 3.9+ with pyCP_APR and numpy installed:
-#   python3 -m venv cxtebtd_env
-#   source cxtebtd_env/bin/activate
+#   python3 -m venv cosparta_env
+#   source cosparta_env/bin/activate
 #   pip install pyCP_APR numpy
 # =============================================================================
-use_virtualenv("cxtebtd_env", required = TRUE)
+use_virtualenv("cosparta_env", required = TRUE)
 
 # =============================================================================
 # STEP 1: Load data
@@ -40,7 +40,7 @@ cat(sprintf("Sparsity: %.4f\n", mean(Xtensor == 0)))
 K       <- 10
 maxiter <- 100
 
-init_list <- init_cpapr(Xtensor, K = K, virtualenv = "cxtebtd_env",
+init_list <- init_cpapr(Xtensor, K = K, virtualenv = "cosparta_env",
                          method = "torch")
 
 # =============================================================================
@@ -48,7 +48,7 @@ init_list <- init_cpapr(Xtensor, K = K, virtualenv = "cxtebtd_env",
 # =============================================================================
 cat("\nFitting unsupervised CoSparTA...\n")
 st <- Sys.time()
-fit_ebtd <- CoSparTA(
+fit_covfree <- CoSparTA(
   X                    = Xtensor,
   K                    = K,
   Xcov                 = NULL,
@@ -60,8 +60,6 @@ fit_ebtd <- CoSparTA(
 )
 cat(sprintf("Unsupervised fit time: %s\n", format(Sys.time() - st)))
 
-fit_ebtd_normed <- normalize_factors(fit_ebtd)
-
 # =============================================================================
 # STEP 4: Covariate selection
 # =============================================================================
@@ -69,7 +67,7 @@ cat("\nSelecting covariates...\n")
 result <- select_covariates(
   K              = K,
   covariate_data = X_cov,
-  El             = fit_ebtd_normed$El
+  fit            = fit_covfree
 )
 
 Xcov_list <- lapply(result$selected, function(idx) {
@@ -80,9 +78,13 @@ Xcov_list <- lapply(result$selected, function(idx) {
 # STEP 5: Fit supervised CoSparTA
 # =============================================================================
 cat("\nFitting supervised CoSparTA...\n")
-init_list2 <- list(fit_ebtd_normed$El, fit_ebtd_normed$Ef, fit_ebtd_normed$Ew)
+init_list2 <- list(
+  get_loadings(fit_covfree, "U1"),
+  get_loadings(fit_covfree, "U2"),
+  get_loadings(fit_covfree, "U3")
+)
 st <- Sys.time()
-fit_cxtebtd <- CoSparTA(
+fit_cov <- CoSparTA(
   X                    = Xtensor,
   K                    = K,
   Xcov                 = Xcov_list,
@@ -97,8 +99,6 @@ fit_cxtebtd <- CoSparTA(
 )
 cat(sprintf("Supervised fit time: %s\n", format(Sys.time() - st)))
 
-fit_cxtebtd_normed <- normalize_factors(fit_cxtebtd)
-
 # =============================================================================
 # STEP 6: Visualization
 # =============================================================================
@@ -109,7 +109,7 @@ df <- bind_rows(lapply(1:K, function(k) {
   gamma_full <- setNames(rep(0, length(all_covs)), all_covs)
   selected_names <- colnames(X_cov)[result$selected[[k]]]
   if (length(selected_names) > 0)
-    gamma_full[selected_names] <- fit_cxtebtd_normed$gamma_list[[k]]
+    gamma_full[selected_names] <- get_loadings(fit_cov, "gamma")[[k]]$gamma
   data.frame(factor = paste0("F", k), covariate = all_covs, gamma = gamma_full)
 })) %>%
   mutate(
@@ -138,16 +138,14 @@ p_gamma <- ggplot(df, aes(x = covariate, y = gamma, fill = sign)) +
 print(p_gamma)
 
 # --- Temporal patterns ---
-p_time <- plot_time_factors(
-  Ef          = fit_cxtebtd_normed$Ef,
+p_time <- plot_time_factors(fit_cov,
   time_labels = 169:336,
   xlim        = c(169, 336)
 )
 print(p_time)
 
 # --- Channel patterns ---
-p_channel <- plot_channel_factors(
-  Ew             = fit_cxtebtd_normed$Ew,
+p_channel <- plot_channel_factors(fit_cov,
   channel_names  = channel_info$channel_names,
   channel_groups = channel_info$channel_groups
 )
