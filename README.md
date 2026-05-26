@@ -82,11 +82,12 @@ fit <- CoSparTA(
   tol                  = 1e-6,
   verbose              = TRUE
 )
-# Key outputs:
-# fit$res$ql$El -- n x K posterior mean loadings (U1)
-# fit$res$qf$Ef -- p x K time factors            (U2)
-# fit$res$qw$Ew -- w x K channel weights         (U3)
-# fit$res$gl    -- list of K covariate coefficient vectors
+# Retrieve outputs via the unified getter:
+U1     <- get_loadings(fit, "U1")      # n x K normalized loadings
+U2     <- get_loadings(fit, "U2")      # p x K time factors
+U3     <- get_loadings(fit, "U3")      # w x K channel weights
+lambda <- get_loadings(fit, "weight")  # length-K component weights
+gamma  <- get_loadings(fit, "gamma")   # list of K covariate coefficient vectors
 ```
 
 Rank-specific covariate sets and missing data are also supported:
@@ -114,31 +115,30 @@ ci_w <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "W")
 ci_l <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "L")
 
 # Delta-method CIs for covariate coefficients
-ci_gamma <- get_gamma_ci(fit, method = "delta", level = 0.95)
+ci_gamma <- get_gamma_ci(fit, level = 0.95)
 print(ci_gamma[[1]])   # factor 1 results
 ```
 
 ### Stage 4: Covariate screening
 
 ```r
-# Fit covariate-free model, then screen covariates
-fit_unsup  <- CoSparTA(X, K = 4, Xcov = NULL, init = init_vals,
-                       convergence_criteria = "ELBO")
-nf_unsup   <- normalize_factors(fit_unsup)
-sel        <- select_covariates(K = 4,
-                                covariate_data = as.data.frame(Xcov_mat),
-                                El             = nf_unsup$El)
-sel$selected   # selected covariate indices per factor
+# Fit covariate-free model, screen covariates against log-transformed active loadings
+fit_unsup <- CoSparTA(X, K = 4, Xcov = NULL, init = init_vals,
+                      convergence_criteria = "ELBO")
+sel <- select_covariates(K = 4,
+                         covariate_data = as.data.frame(Xcov_mat),
+                         El = get_loadings(fit_unsup, "U1"))
+sel$selected   # list of selected covariate names per factor
 ```
 
 ### Stage 5: Post-processing
 
 ```r
-# Normalize to unit norm, sort by weight lambda
-nf <- normalize_factors(fit)
+# Normalized factors are available directly from the fit object
+U1 <- get_loadings(fit, "U1")   # already normalized and ordered
 
 # Project new observations onto the factor space (no refit)
-X_new <- X[991:1000, , ]   # held-out sessions for illustration
+X_new <- X[991:1000, , ]
 F_new <- project_tensor(X_new, fit)
 
 # Reconstruct the denoised Poisson mean tensor
@@ -149,10 +149,10 @@ X_hat <- reconstruct_tensor(fit)
 
 ```r
 # Faceted line plot of K time factors
-plot_time_factors(Ef = nf$Ef, time_labels = 1:100)
+plot_time_factors(fit, time_labels = 1:100)
 
 # Faceted bar plot of K channel factors with category grouping
-plot_channel_factors(Ew             = nf$Ew,
+plot_channel_factors(fit,
                      channel_names  = website_names,
                      channel_groups = channel_groups)
 ```
