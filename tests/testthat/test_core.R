@@ -57,7 +57,7 @@ test_that("E: posterior quantiles are ordered correctly for L and W modes", {
   q_W <- get_posterior_quantile(fit_B, probs = c(0.025, 0.975), mode = 'W')
   expect_true(all(q_W$q2.5 <= q_W$q97.5, na.rm = TRUE))
   expect_equal(dim(q_W$q2.5), c(w, K))
-  expect_error(get_posterior_quantile(fit_B, mode = 'F'))
+  expect_no_error(get_posterior_quantile(fit_B, mode = 'F'))
 })
 
 test_that("F: normalize_factors returns unit-norm columns sorted by lambda", {
