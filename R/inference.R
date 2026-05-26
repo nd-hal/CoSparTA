@@ -325,7 +325,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L',
 #'
 #' @param fit A fitted object returned by \code{\link{CoSparTA}}.
 #' @param method Character: \code{"delta"} or \code{"bootstrap"}.
-#'   Default \code{"bootstrap"}.
+#'   Default \code{"delta"}.
 #' @param level Numeric confidence level in \code{(0, 1)}. Default \code{0.95}.
 #' @param B Integer. Number of bootstrap replicates (only used when
 #'   \code{method = "bootstrap"}). Default \code{200}.
@@ -383,7 +383,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L',
 #' @seealso \code{\link{CoSparTA}},
 #'   \code{\link{ebpm_point_gamma_multiplier_covariates}}
 #' @export
-get_gamma_ci <- function(fit, method = "bootstrap", level = 0.95,
+get_gamma_ci <- function(fit, method = "delta", level = 0.95,
                           B = 200, X = NULL, K = NULL, Xcov = NULL,
                           normalized = TRUE, init_fn = NULL,
                           verbose = TRUE, ...) {

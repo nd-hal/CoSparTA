@@ -6,7 +6,7 @@
 \usage{
 get_gamma_ci(
   fit,
-  method = "bootstrap",
+  method = "delta",
   level = 0.95,
   B = 200,
   X = NULL,
@@ -22,7 +22,7 @@ get_gamma_ci(
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}}.}
 
 \item{method}{Character: \code{"delta"} or \code{"bootstrap"}.
-Default \code{"bootstrap"}.}
+Default \code{"delta"}.}
 
 \item{level}{Numeric confidence level in \code{(0, 1)}. Default \code{0.95}.}
 
