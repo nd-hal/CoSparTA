@@ -8,7 +8,8 @@ get_posterior_quantile(
   fit,
   probs = c(0.025, 0.975),
   mode = "L",
-  normalized = TRUE
+  normalized = TRUE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -32,18 +33,32 @@ A named list with one matrix per entry of \code{probs}. Each
   matrix has the same dimensions as the corresponding factor matrix
   (\code{n x K} for L, \code{p x K} for F, \code{w x K} for W). Names
   are formatted as \code{paste0("q", round(probs * 100, 1))}, e.g.
-  \code{"q2.5"} and \code{"q97.5"} for the default \code{probs}.
+  \code{"q2.5"} and \code{"q97.5"} for the default \code{probs}. For
+  modes with a \code{"smooth_lognormal"} family the quantiles are
+  strictly positive; for \code{"point_gamma"} modes they are
+  non-negative (zero where the spike mass absorbs the probability).
 }
 \description{
 Computes exact quantiles of the marginal posterior distribution for each
-factor element, using the closed-form spike-and-slab structure of the
-point-gamma posterior. The marginal CDF is:
-\deqn{F(\theta) = \hat\pi_i \cdot \mathbf{1}[\theta \geq 0] +
-  (1 - \hat\pi_i) \cdot F_{\text{Gamma}}(\theta)}
-so the quantile at probability \eqn{\tau} is 0 when
-\eqn{\tau \leq \hat\pi_i}, and otherwise
-\eqn{F_{\text{Gamma}}^{-1}\!\left((\tau - \hat\pi_i)\,/\,(1 - \hat\pi_i)\right)}
-where the gamma is parameterized by the posterior shape and rate.
+factor element. Dispatches on the posterior family tag stored in the fit
+object (\code{fit$res$q*$family_*}) so that user-specified \code{ebpm.fn}
+configurations produce correct intervals regardless of prior family:
+\describe{
+  \item{\code{"point_gamma"}}{Spike-and-slab mixture with a Gamma slab.
+    The marginal CDF is \eqn{F(\theta) = \hat\pi_i \cdot \mathbf{1}[\theta
+    \geq 0] + (1 - \hat\pi_i) \cdot F_{\text{Gamma}}(\theta)}, so the
+    quantile at \eqn{\tau} is 0 when \eqn{\tau \leq \hat\pi_i} and
+    \eqn{F_{\text{Gamma}}^{-1}((\tau - \hat\pi_i)/(1-\hat\pi_i))} otherwise.}
+  \item{\code{"smooth_lognormal"}}{Log-normal posterior from a smooth
+    wavelet-based prior. Quantiles are computed as
+    \eqn{\exp(\mu_{\log} + \sqrt{\sigma^2_{\log}} \cdot
+    \Phi^{-1}(\tau))}, where \eqn{\mu_{\log}} and
+    \eqn{\sigma^2_{\log}} are the posterior mean and variance in log space.
+    When \eqn{\sigma^2_{\log}} is unavailable, a delta-method approximation
+    \eqn{\sigma^2_{\log} \approx \text{Var}/\text{Mean}^2} is used.}
+}
+If the family tag is absent (fit produced before this change), the function
+falls back to \code{"point_gamma"} with a warning.
 }
 \examples{
 \dontrun{

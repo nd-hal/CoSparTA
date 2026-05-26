@@ -63,6 +63,7 @@ ebpm_point_gamma_with_uq <- function(x, s = 1, ...) {
   fit$posterior$pip        <- 1 - pi_hat
   fit$posterior$shape_post <- a + x
   fit$posterior$rate_post  <- b + s
+  fit$family               <- "point_gamma"
 
   return(fit)
 }
@@ -114,6 +115,7 @@ ebps_with_uq <- function(x, s = NULL, ...) {
   fit$posterior$pip        <- NA
   fit$posterior$shape_post <- NA
   fit$posterior$rate_post  <- NA
+  fit$family               <- "smooth_lognormal"
 
   return(fit)
 }

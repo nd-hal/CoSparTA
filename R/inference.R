@@ -175,14 +175,25 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both',
 #'
 #' @description
 #' Computes exact quantiles of the marginal posterior distribution for each
-#' factor element, using the closed-form spike-and-slab structure of the
-#' point-gamma posterior. The marginal CDF is:
-#' \deqn{F(\theta) = \hat\pi_i \cdot \mathbf{1}[\theta \geq 0] +
-#'   (1 - \hat\pi_i) \cdot F_{\text{Gamma}}(\theta)}
-#' so the quantile at probability \eqn{\tau} is 0 when
-#' \eqn{\tau \leq \hat\pi_i}, and otherwise
-#' \eqn{F_{\text{Gamma}}^{-1}\!\left((\tau - \hat\pi_i)\,/\,(1 - \hat\pi_i)\right)}
-#' where the gamma is parameterized by the posterior shape and rate.
+#' factor element. Dispatches on the posterior family tag stored in the fit
+#' object (\code{fit$res$q*$family_*}) so that user-specified \code{ebpm.fn}
+#' configurations produce correct intervals regardless of prior family:
+#' \describe{
+#'   \item{\code{"point_gamma"}}{Spike-and-slab mixture with a Gamma slab.
+#'     The marginal CDF is \eqn{F(\theta) = \hat\pi_i \cdot \mathbf{1}[\theta
+#'     \geq 0] + (1 - \hat\pi_i) \cdot F_{\text{Gamma}}(\theta)}, so the
+#'     quantile at \eqn{\tau} is 0 when \eqn{\tau \leq \hat\pi_i} and
+#'     \eqn{F_{\text{Gamma}}^{-1}((\tau - \hat\pi_i)/(1-\hat\pi_i))} otherwise.}
+#'   \item{\code{"smooth_lognormal"}}{Log-normal posterior from a smooth
+#'     wavelet-based prior. Quantiles are computed as
+#'     \eqn{\exp(\mu_{\log} + \sqrt{\sigma^2_{\log}} \cdot
+#'     \Phi^{-1}(\tau))}, where \eqn{\mu_{\log}} and
+#'     \eqn{\sigma^2_{\log}} are the posterior mean and variance in log space.
+#'     When \eqn{\sigma^2_{\log}} is unavailable, a delta-method approximation
+#'     \eqn{\sigma^2_{\log} \approx \text{Var}/\text{Mean}^2} is used.}
+#' }
+#' If the family tag is absent (fit produced before this change), the function
+#' falls back to \code{"point_gamma"} with a warning.
 #'
 #' @param fit A fitted object returned by \code{\link{CoSparTA}} or
 #'   \code{\link{CoSparTA_missing}}.
@@ -200,7 +211,10 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both',
 #'   matrix has the same dimensions as the corresponding factor matrix
 #'   (\code{n x K} for L, \code{p x K} for F, \code{w x K} for W). Names
 #'   are formatted as \code{paste0("q", round(probs * 100, 1))}, e.g.
-#'   \code{"q2.5"} and \code{"q97.5"} for the default \code{probs}.
+#'   \code{"q2.5"} and \code{"q97.5"} for the default \code{probs}. For
+#'   modes with a \code{"smooth_lognormal"} family the quantiles are
+#'   strictly positive; for \code{"point_gamma"} modes they are
+#'   non-negative (zero where the spike mass absorbs the probability).
 #'
 #' @seealso \code{\link{get_pip}}
 #'
@@ -220,73 +234,139 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both',
 #'
 #' @export
 get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L',
-                                    normalized = TRUE) {
+                                    normalized = TRUE, verbose = FALSE) {
+  .t0 <- Sys.time()
 
-  pip_mat <- if (normalized) {
-    switch(mode,
-      'L' = fit$res$ql$PIPl_normed,
-      'F' = fit$res$qf$PIPf_normed,
-      'W' = fit$res$qw$PIPw_normed,
-      stop("mode must be one of 'L', 'F', or 'W'")
-    )
-  } else {
-    switch(mode,
-      'L' = fit$res$ql$PIPl,
-      'F' = fit$res$qf$PIPf,
-      'W' = fit$res$qw$PIPw,
-      stop("mode must be one of 'L', 'F', or 'W'")
-    )
+  # Read family tag for the requested mode
+  family <- switch(mode,
+    'L' = fit$res$ql$family_l,
+    'F' = fit$res$qf$family_f,
+    'W' = fit$res$qw$family_w,
+    stop("mode must be one of 'L', 'F', or 'W'")
+  )
+
+  if (is.null(family)) {
+    warning("Posterior family tag missing — fit was produced before family ",
+            "tagging was introduced. Falling back to 'point_gamma'.")
+    family <- "point_gamma"
   }
 
-  shape_mat <- if (normalized) {
-    switch(mode,
-      'L' = fit$res$ql$shape_post_l_normed,
-      'F' = fit$res$qf$shape_post_f_normed,
-      'W' = fit$res$qw$shape_post_w_normed
-    )
-  } else {
-    switch(mode,
-      'L' = fit$res$ql$shape_post_l,
-      'F' = fit$res$qf$shape_post_f,
-      'W' = fit$res$qw$shape_post_w
-    )
+  if (!family %in% c("point_gamma", "smooth_lognormal")) {
+    stop(sprintf("Unknown posterior family '%s'. Expected 'point_gamma' or ",
+                 "'smooth_lognormal'."), family)
   }
 
-  rate_mat <- if (normalized) {
-    switch(mode,
-      'L' = fit$res$ql$rate_post_l_normed,
-      'F' = fit$res$qf$rate_post_f_normed,
-      'W' = fit$res$qw$rate_post_w_normed
-    )
-  } else {
-    switch(mode,
-      'L' = fit$res$ql$rate_post_l,
-      'F' = fit$res$qf$rate_post_f,
-      'W' = fit$res$qw$rate_post_w
-    )
+  # Dispatch to family-specific helpers
+  if (family == "point_gamma") {
+    pip_mat   <- if (normalized) {
+      switch(mode, 'L' = fit$res$ql$PIPl_normed,
+                   'F' = fit$res$qf$PIPf_normed,
+                   'W' = fit$res$qw$PIPw_normed)
+    } else {
+      switch(mode, 'L' = fit$res$ql$PIPl,
+                   'F' = fit$res$qf$PIPf,
+                   'W' = fit$res$qw$PIPw)
+    }
+    shape_mat <- if (normalized) {
+      switch(mode, 'L' = fit$res$ql$shape_post_l_normed,
+                   'F' = fit$res$qf$shape_post_f_normed,
+                   'W' = fit$res$qw$shape_post_w_normed)
+    } else {
+      switch(mode, 'L' = fit$res$ql$shape_post_l,
+                   'F' = fit$res$qf$shape_post_f,
+                   'W' = fit$res$qw$shape_post_w)
+    }
+    rate_mat  <- if (normalized) {
+      switch(mode, 'L' = fit$res$ql$rate_post_l_normed,
+                   'F' = fit$res$qf$rate_post_f_normed,
+                   'W' = fit$res$qw$rate_post_w_normed)
+    } else {
+      switch(mode, 'L' = fit$res$ql$rate_post_l,
+                   'F' = fit$res$qf$rate_post_f,
+                   'W' = fit$res$qw$rate_post_w)
+    }
+    if (is.null(shape_mat) || is.null(rate_mat) ||
+        all(is.na(shape_mat)) || all(is.na(rate_mat))) {
+      stop("Posterior Gamma parameters not available. Refit the model with the current package version.")
+    }
+    out <- .quantile_point_gamma(pip_mat, shape_mat, rate_mat, probs)
+
+  } else {  # smooth_lognormal
+    mean_log_mat <- if (normalized) {
+      switch(mode, 'L' = fit$res$ql$Elogl_normed,
+                   'F' = fit$res$qf$Elogf_normed,
+                   'W' = fit$res$qw$Elogw_normed)
+    } else {
+      switch(mode, 'L' = fit$res$ql$Elogl,
+                   'F' = fit$res$qf$Elogf,
+                   'W' = fit$res$qw$Elogw)
+    }
+    var_log_mat <- if (normalized) {
+      switch(mode, 'L' = NULL,
+                   'F' = fit$res$qf$var_log_f_normed,
+                   'W' = NULL)
+    } else {
+      switch(mode, 'L' = NULL,
+                   'F' = fit$res$qf$var_log_f,
+                   'W' = NULL)
+    }
+    # Fall back to delta-method approximation when var_log is unavailable
+    if (is.null(var_log_mat) || all(is.na(var_log_mat))) {
+      ef_mat <- if (normalized) {
+        switch(mode, 'L' = fit$res$ql$El_normed,
+                     'F' = fit$res$qf$Ef_normed,
+                     'W' = fit$res$qw$Ew_normed)
+      } else {
+        switch(mode, 'L' = fit$res$ql$El,
+                     'F' = fit$res$qf$Ef,
+                     'W' = fit$res$qw$Ew)
+      }
+      varf_mat <- if (normalized) {
+        switch(mode, 'L' = fit$res$ql$Varl,
+                     'F' = fit$res$qf$Varf,
+                     'W' = fit$res$qw$Varw)
+      } else {
+        switch(mode, 'L' = fit$res$ql$Varl,
+                     'F' = fit$res$qf$Varf,
+                     'W' = fit$res$qw$Varw)
+      }
+      if (!is.null(varf_mat) && !all(is.na(varf_mat))) {
+        var_log_mat <- pmax(varf_mat, 0) / (ef_mat^2 + 1e-10)
+      } else {
+        stop("Neither var_log nor Var available for smooth_lognormal mode '",
+             mode, "'. Cannot compute quantiles.")
+      }
+    }
+    out <- .quantile_smooth_lognormal(mean_log_mat, var_log_mat, probs)
   }
 
-  if (is.null(shape_mat) || is.null(rate_mat) ||
-      all(is.na(shape_mat)) || all(is.na(rate_mat))) {
-    stop("Posterior Gamma parameters not available. Refit the model with the current package version.")
-  }
+  names(out) <- paste0("q", round(probs * 100, 1))
+  .elapsed <- as.numeric(difftime(Sys.time(), .t0, units = "secs"))
+  if (verbose) message(sprintf("get_posterior_quantile runtime: %.4f secs", .elapsed))
+  out$runtime_secs <- .elapsed
+  out
+}
 
+#' @keywords internal
+.quantile_point_gamma <- function(pip_mat, shape_mat, rate_mat, probs) {
   pi_hat_mat <- 1 - pip_mat
-
-  out <- lapply(probs, function(tau) {
-    q_mat <- matrix(0, nrow = nrow(pip_mat), ncol = ncol(pip_mat))
+  lapply(probs, function(tau) {
+    q_mat    <- matrix(0, nrow = nrow(pip_mat), ncol = ncol(pip_mat))
     slab_idx <- !is.na(pi_hat_mat) & tau > pi_hat_mat & pi_hat_mat < 1
     if (any(slab_idx)) {
-      adjusted_prob <- (tau - pi_hat_mat[slab_idx]) / (1 - pi_hat_mat[slab_idx])
-      q_mat[slab_idx] <- qgamma(adjusted_prob,
-                                 shape = shape_mat[slab_idx],
+      adj <- (tau - pi_hat_mat[slab_idx]) / (1 - pi_hat_mat[slab_idx])
+      q_mat[slab_idx] <- qgamma(adj, shape = shape_mat[slab_idx],
                                  rate = rate_mat[slab_idx])
     }
     q_mat
   })
+}
 
-  names(out) <- paste0("q", round(probs * 100, 1))
-  out
+#' @keywords internal
+.quantile_smooth_lognormal <- function(mean_log_mat, var_log_mat, probs) {
+  lapply(probs, function(tau) {
+    exp(mean_log_mat + sqrt(pmax(var_log_mat, 0)) * qnorm(tau))
+  })
 }
 
 

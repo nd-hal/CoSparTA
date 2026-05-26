@@ -31,6 +31,12 @@
     res$qf$shape_post_f_normed <- res$qf$shape_post_f[, perm, drop = FALSE]
     res$qf$rate_post_f_normed  <- sweep(res$qf$rate_post_f, 2, nf, "*")[, perm, drop = FALSE]
   }
+  # For smooth_lognormal: E[log(F_normed_k)] = E[log(F_k)] - log(nf_k)
+  if (!is.null(res$qf$Elogf))
+    res$qf$Elogf_normed <- sweep(res$qf$Elogf, 2, log(nf), "-")[, perm, drop = FALSE]
+  # log-domain variance is invariant to multiplicative scaling
+  if (!is.null(res$qf$var_log_f))
+    res$qf$var_log_f_normed <- res$qf$var_log_f[, perm, drop = FALSE]
 
   # Mode 3 (W)
   res$qw$Ew_normed <- sweep(Ew, 2, nw, "/")[, perm, drop = FALSE]
@@ -153,6 +159,7 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     res$Hl[k] = calc_H(l_seq,l_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gl[[k]] = fit$fitted_g
     if (!is.null(fit$hessian)) res$gl[[k]]$hessian <- fit$hessian
+    if (!is.null(fit$family)) res$ql$family_l <- fit$family
   }
 
   # update F
@@ -174,8 +181,14 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
       res$qf$shape_post_f[, k] <- fit$posterior$shape_post
       res$qf$rate_post_f[, k]  <- fit$posterior$rate_post
     }
+    # Store log-domain variance for smooth_lognormal family
+    if (is.null(res$qf$var_log_f)) res$qf$var_log_f <- matrix(NA_real_, nrow(res$qf$Ef), ncol(res$qf$Ef))
+    if (!is.null(fit$posterior$var_log)) {
+      res$qf$var_log_f[, k] <- fit$posterior$var_log
+    }
     res$Hf[k] = calc_H(f_seq,f_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     res$gf[[k]] = fit$fitted_g
+    if (!is.null(fit$family)) res$qf$family_f <- fit$family
   }
 
   # Update W
@@ -198,6 +211,7 @@ stm_update_rank1 = function(l_seq, f_seq, w_seq, k, ebpm.fn.l, ebpm.fn.f, ebpm.f
     }
     res$Hw[k] = calc_H(w_seq,w_scale,fit$log_likelihood,fit$posterior$mean,fit$posterior$mean_log)
     if(!is.null(fit$fitted_g)) res$gw[[k]] <- fit$fitted_g
+    if (!is.null(fit$family)) res$qw$family_w <- fit$family
   }
 
   return(res)

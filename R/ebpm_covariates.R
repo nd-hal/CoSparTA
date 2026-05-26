@@ -201,7 +201,8 @@ ebpm_point_gamma_multiplier_covariates <- function(x, s = 1, X, g_init = NULL, c
     posterior = posterior,
     log_likelihood = -opt_result$minimum,
     convergence_code = opt_result$code,
-    hessian = if (!is.null(opt_result$hessian)) opt_result$hessian else NULL
+    hessian = if (!is.null(opt_result$hessian)) opt_result$hessian else NULL,
+    family = "point_gamma"
   ))
 }
 
