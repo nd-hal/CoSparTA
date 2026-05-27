@@ -265,6 +265,7 @@ CoSparTA = function(X,K,Xcov=NULL,
         max(abs(norm_col(res$qf$Ef) - norm_col(Ef_prev)), na.rm = TRUE),
         max(abs(norm_col(res$qw$Ew) - norm_col(Ew_prev)), na.rm = TRUE)
       )
+      obj[iter] <- max_change
       if (max_change < tol) {
         stable_count <- stable_count + 1L
 
