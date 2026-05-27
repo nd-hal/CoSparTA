@@ -236,6 +236,7 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
                              maxiter = 100,
                              maxiter_init = 100,
                              tol = 1e-6,
+                             compute_elbo_final = FALSE,
                              ebpm.fn = c(ebpm_point_gamma_multiplier_covariates,
                                          ebps_with_uq,
                                          ebpm_point_gamma_with_uq),
@@ -456,7 +457,13 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
 
   if (iter == maxiter) message('Reached maximum iterations')
 
-  elbo <- .calc_stm_obj_missing(x, n, p, w, K, res, non0_idx, obs_structure)
+  if (convergence_criteria == "ELBO") {
+    elbo <- obj[iter]
+  } else if (compute_elbo_final) {
+    elbo <- .calc_stm_obj_missing(x, obs_structure, n, p, w, K, res)
+  } else {
+    elbo <- NA_real_
+  }
 
   ret_EL <- matrix(0, nrow = n_original, ncol = K)
   ret_EF <- matrix(0, nrow = p_original, ncol = K)

@@ -129,7 +129,8 @@ CoSparTA = function(X,K,Xcov=NULL,
                                     maxiter=100,
                                     maxiter_init = 100,
                                     tol=1e-6,
-                                    #ebpm.fn=c(ebpm_point_gamma_multiplier_covariates,smashrgen::ebps,ebpm::ebpm_point_gamma), 
+                                    compute_elbo_final = FALSE,
+                                    #ebpm.fn=c(ebpm_point_gamma_multiplier_covariates,smashrgen::ebps,ebpm::ebpm_point_gamma),
                                     ebpm.fn=c(ebpm_point_gamma_multiplier_covariates,ebps_with_uq,ebpm_point_gamma_with_uq), # for var and pip
                                     fix_L = FALSE, fix_F = FALSE, fix_W = FALSE,
                                     smooth_F = T,
@@ -350,7 +351,13 @@ CoSparTA = function(X,K,Xcov=NULL,
     cat('wrapping-up')
     cat('\n')
   }
-  elbo = calc_stm_obj(x,n,p,w,K,res,non0_idx)
+  if (convergence_criteria == "ELBO") {
+    elbo <- obj[iter]
+  } else if (compute_elbo_final) {
+    elbo <- calc_stm_obj(x, n, p, w, K, res, non0_idx)
+  } else {
+    elbo <- NA_real_
+  }
 
   res$ql$El <- ret_EL
   res$qf$Ef <- ret_EF
