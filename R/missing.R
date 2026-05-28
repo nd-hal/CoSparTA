@@ -406,6 +406,35 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
       }
     }
 
+    if (convergence_criteria == "recon_change") {
+      G1_prev <- crossprod(El_prev)
+      G2_prev <- crossprod(Ef_prev)
+      G3_prev <- crossprod(Ew_prev)
+      denom_sq <- sum(G1_prev * G2_prev * G3_prev)
+      if (denom_sq < 1e-20) denom_sq <- 1
+      max_change <- max(sapply(1:K, function(k) {
+        norm_sq_curr <- sum(res$ql$El[,k]^2) * sum(res$qf$Ef[,k]^2) * sum(res$qw$Ew[,k]^2)
+        norm_sq_prev <- sum(El_prev[,k]^2)   * sum(Ef_prev[,k]^2)   * sum(Ew_prev[,k]^2)
+        if (norm_sq_prev < 1e-20) return(0)
+        dot_product  <- sum(res$ql$El[,k] * El_prev[,k]) *
+                        sum(res$qf$Ef[,k] * Ef_prev[,k]) *
+                        sum(res$qw$Ew[,k] * Ew_prev[,k])
+        diff_sq <- norm_sq_curr - 2 * dot_product + norm_sq_prev
+        sqrt(max(diff_sq, 0)) / sqrt(denom_sq)
+      }))
+      obj[iter] <- max_change
+      if (max_change < tol) {
+        stable_count <- stable_count + 1L
+        if (stable_count >= n_stable) break
+      } else {
+        stable_count <- 0L
+      }
+      if (verbose && iter %% printevery == 0) {
+        cat(sprintf("At iter %d, recon_change = %e", iter, max_change))
+        cat("\n")
+      }
+    }
+
     if (convergence_criteria == 'ELBO') {
       obj[iter + 1] <- .calc_stm_obj_missing(x, n, p, w, K, res,
                                               non0_idx, obs_structure)
@@ -459,7 +488,7 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
   if (iter == maxiter) message('Reached maximum iterations')
 
   if (convergence_criteria == "ELBO") {
-    elbo <- obj[iter]
+    elbo <- obj[iter + 1]
   } else if (compute_elbo_final) {
     elbo <- .calc_stm_obj_missing(x, obs_structure, n, p, w, K, res)
   } else {
