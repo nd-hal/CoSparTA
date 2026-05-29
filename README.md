@@ -14,6 +14,48 @@ devtools::install_github("DongyueXie/smashrgen")
 devtools::install_github("xzhang0407/CoSparTA")
 ```
 
+## Repository Structure
+
+```
+CoSparTA/
+├── DESCRIPTION
+├── NAMESPACE
+├── LICENSE
+├── R/
+│   ├── CoSparTA.R              # Main fitting function: CoSparTA
+│   ├── missing.R               # Missing data: CoSparTA_missing,
+│   │                           #   generate_missing_mask, evaluate_missing_prediction
+│   ├── ebpm_covariates.R       # Covariate-dependent prior: ebpm_point_gamma_multiplier_covariates
+│   ├── ebpm_wrappers.R         # Prior solver wrappers: ebpm_point_gamma_with_uq, ebps_with_uq
+│   ├── inference.R             # Posterior inference: get_pip, get_posterior_quantile,
+│   │                           #   get_significant_patterns, get_gamma_ci
+│   ├── postprocessing.R        # Factor utilities: get_loadings, normalize_factors,
+│   │                           #   match_factors, project_tensor, reconstruct_tensor,
+│   │                           #   select_covariates, simulate_tensor, init_cpapr
+│   ├── preprocessing.R         # Data utilities: build_tensor
+│   ├── visualization.R         # Plotting: plot_time_factors, plot_channel_factors
+│   ├── internals.R             # Internal CAVI update logic
+│   ├── utils.R                 # Internal helpers and utility functions
+│   └── RcppExports.R           # Auto-generated Rcpp bindings
+├── src/
+│   ├── calc_EZ_3d_cpp.cpp      # Sparse weighted aggregation for E[Z] (C++)
+│   └── calc_qz_sparse_cpp.cpp  # Sparse softmax for factor responsibilities (C++)
+├── data/
+│   ├── demo_df.rds                    # Demo event log (long format)
+│   ├── demo_covariates.csv            # Demo covariate matrix
+│   ├── demo_channel_groups.rds        # Demo channel groupings for visualization
+│   ├── clickstream_synth_tensor.rds   # Synthetic clickstream tensor (real-data demo)
+│   ├── clickstream_synth_cov.csv      # Synthetic clickstream covariates
+│   └── clickstream_channel_names.rds  # Channel names for clickstream demo
+├── examples/
+│   ├── demo.R                  # Full pipeline walkthrough (synthetic data)
+│   └── demo_clickstream.R      # Real clickstream data example
+└── tests/
+    └── testthat/
+        ├── test_core.R         # Tests: decomposition, missing data
+        └── test_inference.R    # Tests: PIPs, credible intervals, gamma CI
+```
+
 ## Quick Start
 
 The following example walks through the complete analysis pipeline using a
