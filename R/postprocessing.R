@@ -61,7 +61,7 @@ get_loadings <- function(fit, what = "U1", normalized = TRUE) {
       "U2"     = fit$res$qf$Ef_normed,
       "U3"     = fit$res$qw$Ew_normed,
       "weight" = fit$res$lambda_normed,
-      "gamma"  = lapply(fit$res$gl, function(x) x$gamma)
+      "gamma"  = lapply(fit$res$gl_normed, function(x) x$gamma)
     )
   } else {
     switch(what,
