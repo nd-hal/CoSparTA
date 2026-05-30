@@ -246,7 +246,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L',
   )
 
   if (is.null(family)) {
-    warning("Posterior family tag missing — fit was produced before family ",
+    warning("Posterior family tag missing -- fit was produced before family ",
             "tagging was introduced. Falling back to 'point_gamma'.")
     family <- "point_gamma"
   }

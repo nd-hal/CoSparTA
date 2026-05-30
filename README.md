@@ -41,12 +41,15 @@ CoSparTA/
 │   ├── calc_EZ_3d_cpp.cpp      # Sparse weighted aggregation for E[Z] (C++)
 │   └── calc_qz_sparse_cpp.cpp  # Sparse softmax for factor responsibilities (C++)
 ├── data/
+│   ├── demo_covariates.rda            # Demo covariate matrix
+│   └── clickstream_synth_cov.rda      # Synthetic clickstream covariates
+├── inst/extdata/
 │   ├── demo_df.rds                    # Demo event log (long format)
-│   ├── demo_covariates.csv            # Demo covariate matrix
 │   ├── demo_channel_groups.rds        # Demo channel groupings for visualization
 │   ├── clickstream_synth_tensor.rds   # Synthetic clickstream tensor (real-data demo)
-│   ├── clickstream_synth_cov.csv      # Synthetic clickstream covariates
-│   └── clickstream_channel_names.rds  # Channel names for clickstream demo
+│   ├── clickstream_channel_names.rds  # Channel names for clickstream demo
+│   ├── demo_covariates.csv            # Demo covariate matrix (raw CSV)
+│   └── clickstream_synth_cov.csv      # Synthetic clickstream covariates (raw CSV)
 ├── examples/
 │   ├── demo.R                  # Full pipeline walkthrough (synthetic data)
 │   └── demo_clickstream.R      # Real clickstream data example
@@ -73,9 +76,9 @@ retained even if some are unobserved.
 library(CoSparTA)
 
 # Load bundled demo data
-df             <- readRDS("data/demo_df.rds")
-cov_df         <- read.csv("data/demo_covariates.csv")
-channel_groups <- readRDS("data/demo_channel_groups.rds")
+df             <- readRDS(system.file("extdata", "demo_df.rds", package = "CoSparTA"))
+data("demo_covariates", package = "CoSparTA"); cov_df <- demo_covariates
+channel_groups <- readRDS(system.file("extdata", "demo_channel_groups.rds", package = "CoSparTA"))
 
 Xcov_mat <- as.matrix(cov_df[, c("cov1", "cov2")])
 

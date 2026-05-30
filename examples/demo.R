@@ -18,9 +18,9 @@ library(ggh4x)
 # =============================================================================
 
 # Load raw data
-df             <- readRDS("data/demo_df.rds")
-cov_df         <- read.csv("data/demo_covariates.csv")
-channel_groups <- readRDS("data/demo_channel_groups.rds")
+df             <- readRDS(system.file("extdata", "demo_df.rds", package = "CoSparTA"))
+data("demo_covariates", package = "CoSparTA"); cov_df <- demo_covariates
+channel_groups <- readRDS(system.file("extdata", "demo_channel_groups.rds", package = "CoSparTA"))
 
 # Covariate matrix
 Xcov_mat <- as.matrix(cov_df[, c("cov1", "cov2")])

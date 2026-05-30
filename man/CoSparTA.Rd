@@ -13,6 +13,7 @@ CoSparTA(
   maxiter = 100,
   maxiter_init = 100,
   tol = 1e-06,
+  compute_elbo_final = FALSE,
   ebpm.fn = c(ebpm_point_gamma_multiplier_covariates, ebps_with_uq,
     ebpm_point_gamma_with_uq),
   fix_L = FALSE,
@@ -56,6 +57,10 @@ initialization step. Default \code{100}.}
 
 \item{tol}{Numeric. Convergence tolerance. Iterations stop when the change
 in the objective is below this threshold. Default \code{1e-6}.}
+
+\item{compute_elbo_final}{Logical. If \code{TRUE}, computes the ELBO after
+the final iteration even when \code{convergence_criteria != 'ELBO'}.
+Default \code{FALSE}.}
 
 \item{ebpm.fn}{A single function or list of three functions specifying
 the empirical Bayes prior for the L, F, and W modes respectively.

@@ -26,9 +26,9 @@ use_virtualenv("cosparta_env", required = TRUE)
 # =============================================================================
 # STEP 1: Load data
 # =============================================================================
-Xtensor     <- readRDS("data/clickstream_synth_tensor.rds")
-X_cov       <- read_csv("data/clickstream_synth_cov.csv", show_col_types = FALSE)
-channel_info <- readRDS("data/clickstream_channel_names.rds")
+Xtensor     <- readRDS(system.file("extdata", "clickstream_synth_tensor.rds", package = "CoSparTA"))
+data("clickstream_synth_cov", package = "CoSparTA"); X_cov <- clickstream_synth_cov
+channel_info <- readRDS(system.file("extdata", "clickstream_channel_names.rds", package = "CoSparTA"))
 
 cat(sprintf("Tensor dimensions: %d x %d x %d\n",
             dim(Xtensor)[1], dim(Xtensor)[2], dim(Xtensor)[3]))

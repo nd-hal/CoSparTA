@@ -14,6 +14,7 @@ CoSparTA_missing(
   maxiter = 100,
   maxiter_init = 100,
   tol = 1e-06,
+  compute_elbo_final = FALSE,
   ebpm.fn = c(ebpm_point_gamma_multiplier_covariates, ebps_with_uq,
     ebpm_point_gamma_with_uq),
   fix_L = FALSE,
@@ -56,6 +57,10 @@ from \code{is.na(X)}. Default \code{NULL}.}
 \item{maxiter_init}{Maximum initialization iterations. Default \code{100}.}
 
 \item{tol}{Convergence tolerance. Default \code{1e-6}.}
+
+\item{compute_elbo_final}{Logical. If \code{TRUE}, computes the ELBO after
+the final iteration even when \code{convergence_criteria != 'ELBO'}.
+Default \code{FALSE}.}
 
 \item{ebpm.fn}{List of three EBPM functions for L, F, W modes respectively.
 Default uses \code{ebpm_point_gamma_multiplier_covariates} for L,

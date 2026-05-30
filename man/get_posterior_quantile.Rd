@@ -27,6 +27,9 @@ evaluate the quantile function. Default \code{c(0.025, 0.975)}.}
 \code{shape_post_*_normed}, \code{rate_post_*_normed}, and
 \code{PIP*_normed} fields (unit-norm columns, descending \eqn{\lambda}
 order). If \code{FALSE}, reads from the corresponding raw fields.}
+
+\item{verbose}{Logical. If \code{TRUE}, prints total function runtime to
+the console. Default \code{FALSE}.}
 }
 \value{
 A named list with one matrix per entry of \code{probs}. Each
