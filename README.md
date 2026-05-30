@@ -123,7 +123,7 @@ fit <- CoSparTA(
   Xcov                 = Xcov_mat,
   init                 = init_vals,
   maxiter              = 20,
-  convergence_criteria = "ELBO",
+  convergence_criteria = "factor_change",
   tol                  = 1e-6,
   verbose              = TRUE
 )
@@ -141,13 +141,13 @@ Rank-specific covariate sets and missing data are also supported:
 # Rank-specific covariates
 fit_rankspec <- CoSparTA(X, K = 4,
   Xcov = list(Xcov_mat, NULL, Xcov_mat[,1,drop=FALSE], Xcov_mat[,2,drop=FALSE]),
-  init = init_vals, convergence_criteria = "ELBO")
+  init = init_vals, convergence_criteria = "factor_change")
 
 # Missing data
 mask     <- generate_missing_mask(X, missing_rate = 0.10)
 fit_miss <- CoSparTA_missing(X, K = 4, Xcov = Xcov_mat,
                              obs_mask = mask$obs_mask,
-                             convergence_criteria = "ELBO")
+                             convergence_criteria = "factor_change")
 ```
 
 ### Stage 3: Uncertainty quantification
@@ -169,7 +169,7 @@ print(ci_gamma[[1]])   # factor 1 results
 ```r
 # Fit covariate-free model, screen covariates against log-transformed active loadings
 fit_unsup <- CoSparTA(X, K = 4, Xcov = NULL, init = init_vals,
-                      convergence_criteria = "ELBO")
+                      convergence_criteria = "factor_change")
 sel <- select_covariates(K = 4,
                          covariate_data = as.data.frame(Xcov_mat),
                          fit = fit_unsup)

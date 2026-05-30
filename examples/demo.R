@@ -67,7 +67,7 @@ fit <- CoSparTA(
   Xcov                 = Xcov_mat,
   init                 = init_vals,  # or "random_gamma" if Python unavailable
   maxiter              = 20,
-  convergence_criteria = "ELBO",
+  convergence_criteria = "factor_change",
   tol                  = 1e-6,
   verbose              = TRUE
 )
@@ -86,7 +86,7 @@ fit_rankspec <- CoSparTA(
   Xcov                 = list(Xcov_mat, NULL, Xcov_cov1, Xcov_cov2),
   init                 = init_vals,
   maxiter              = 20,
-  convergence_criteria = "ELBO",
+  convergence_criteria = "factor_change",
   tol                  = 1e-6,
   verbose              = FALSE
 )
@@ -100,7 +100,7 @@ fit_miss <- CoSparTA_missing(
   Xcov                 = Xcov_mat,
   obs_mask             = mask$obs_mask,
   maxiter              = 20,
-  convergence_criteria = "ELBO",
+  convergence_criteria = "factor_change",
   tol                  = 1e-6,
   verbose              = FALSE
 )
@@ -141,7 +141,7 @@ fit_unsup <- CoSparTA(
   Xcov                 = NULL,
   init                 = init_vals,
   maxiter              = 20,
-  convergence_criteria = "ELBO",
+  convergence_criteria = "factor_change",
   tol                  = 1e-6,
   verbose              = FALSE
 )
