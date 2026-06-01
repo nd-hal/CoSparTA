@@ -11,7 +11,7 @@ Two dependencies are hosted on GitHub and must be installed first:
 ```r
 devtools::install_github("DongyueXie/ebpm")
 devtools::install_github("DongyueXie/smashrgen")
-devtools::install_github("xzhang0407/CoSparTA")
+devtools::install_github("nd-hal/CoSparTA")
 ```
 
 ## Repository Structure
@@ -202,6 +202,7 @@ plot_channel_factors(fit,
                      channel_groups = channel_groups)
 ```
 
-## Questions
+## Questions?
 
-[Contact redacted for review]
+Let me know if you have any requests, bugs, etc.
+Email: xzhang38@nd.edu
