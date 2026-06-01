@@ -1,0 +1,9 @@
+pandoc: 3.8.3
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  cosparta-pipeline: cosparta-pipeline.html
+last_built: 2026-06-01T09:04Z
+urls:
+  reference: https://nd-hal.github.io/CoSparTA/reference
+  article: https://nd-hal.github.io/CoSparTA/articles
