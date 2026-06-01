@@ -41,13 +41,14 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck any::remotes
           needs: check
+          dependencies: '"hard"'
 
       - name: Install GitHub dependencies
         run: |
-          remotes::install_github("DongyueXie/ebpm", upgrade = "never")
-          remotes::install_github("DongyueXie/smashrgen", upgrade = "never")
+          remotes::install_github("DongyueXie/ebpm", upgrade = "never", dependencies = TRUE)
+          remotes::install_github("DongyueXie/smashrgen", upgrade = "never", dependencies = TRUE)
         shell: Rscript {0}
 
       - uses: r-lib/actions/check-r-package@v2
