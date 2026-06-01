@@ -2,7 +2,7 @@
 % Please edit documentation in R/inference.R
 \name{get_gamma_ci}
 \alias{get_gamma_ci}
-\title{Algorithm 1: LFDR Discovery Set}
+\title{Confidence Intervals for Covariate Coefficients}
 \usage{
 get_gamma_ci(
   fit,

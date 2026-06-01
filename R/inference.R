@@ -370,13 +370,7 @@ get_posterior_quantile <- function(fit, probs = c(0.025, 0.975), mode = 'L',
 }
 
 
-#' Algorithm 1: LFDR Discovery Set
-#'
-#' @description
-#' Given a vector of local-fdr values, finds the largest discovery set such
-#' that the mean local-fdr does not exceed alpha.
-#'
-#' Confidence Intervals for Covariate Coefficients (Gamma)
+#' Confidence Intervals for Covariate Coefficients
 #'
 #' @description
 #' Computes confidence intervals for the covariate effect parameters
@@ -542,9 +536,8 @@ get_gamma_ci <- function(fit, method = "delta", level = 0.95,
 
   lambda_hat <- reconstruct_tensor(fit)
 
-  # Capture extra args and enforce adj_LF_scale = FALSE, verbose = FALSE
+  # Capture extra args and enforce verbose = FALSE
   extra_args <- list(...)
-  if (is.null(extra_args$adj_LF_scale)) extra_args$adj_LF_scale <- FALSE
   extra_args$verbose <- FALSE
 
   # Determine q for each rank; initialise storage
@@ -647,6 +640,12 @@ get_gamma_ci <- function(fit, method = "delta", level = 0.95,
 }
 
 
+#' Algorithm 1: LFDR Discovery Set
+#'
+#' @description
+#' Given a vector of local-fdr values, finds the largest discovery set such
+#' that the mean local-fdr does not exceed alpha.
+#'
 #' @param lfdr_vals Numeric vector of local-fdr values in \code{[0, 1]}.
 #' @param alpha Numeric FDR level.
 #'

@@ -490,7 +490,7 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
   if (convergence_criteria == "ELBO") {
     elbo <- obj[iter + 1]
   } else if (compute_elbo_final) {
-    elbo <- .calc_stm_obj_missing(x, obs_structure, n, p, w, K, res)
+    elbo <- .calc_stm_obj_missing(x, n, p, w, K, res, non0_idx, obs_structure)
   } else {
     elbo <- NA_real_
   }
