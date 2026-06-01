@@ -206,6 +206,8 @@ get_significant_patterns <- function(fit, alpha = 0.05, mode = 'both',
 #'   \code{shape_post_*_normed}, \code{rate_post_*_normed}, and
 #'   \code{PIP*_normed} fields (unit-norm columns, descending \eqn{\lambda}
 #'   order). If \code{FALSE}, reads from the corresponding raw fields.
+#' @param verbose Logical. If \code{TRUE}, prints total function runtime to
+#'   the console. Default \code{FALSE}.
 #'
 #' @return A named list with one matrix per entry of \code{probs}. Each
 #'   matrix has the same dimensions as the corresponding factor matrix
@@ -640,17 +642,6 @@ get_gamma_ci <- function(fit, method = "delta", level = 0.95,
 }
 
 
-#' Algorithm 1: LFDR Discovery Set
-#'
-#' @description
-#' Given a vector of local-fdr values, finds the largest discovery set such
-#' that the mean local-fdr does not exceed alpha.
-#'
-#' @param lfdr_vals Numeric vector of local-fdr values in \code{[0, 1]}.
-#' @param alpha Numeric FDR level.
-#'
-#' @return Integer vector of indices in the discovery set (in original order).
-#'
 #' @keywords internal
 lfdr_discovery <- function(lfdr_vals, alpha) {
 

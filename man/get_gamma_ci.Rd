@@ -75,11 +75,6 @@ If a component was fitted without covariates (unsupervised rank),
 its entry is \code{NULL}.
 }
 \description{
-Given a vector of local-fdr values, finds the largest discovery set such
-that the mean local-fdr does not exceed alpha.
-
-Confidence Intervals for Covariate Coefficients (Gamma)
-
 Computes confidence intervals for the covariate effect parameters
 \eqn{\gamma} estimated by \code{\link{CoSparTA}}. Two methods are available:
 

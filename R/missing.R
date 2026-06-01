@@ -181,6 +181,9 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' @param maxiter Maximum EM iterations. Default \code{100}.
 #' @param maxiter_init Maximum initialization iterations. Default \code{100}.
 #' @param tol Convergence tolerance. Default \code{1e-6}.
+#' @param compute_elbo_final Logical. If \code{TRUE}, computes the ELBO after
+#'   the final iteration even when \code{convergence_criteria != 'ELBO'}.
+#'   Default \code{FALSE}.
 #' @param n_stable Integer. Number of consecutive iterations with factor change
 #'   below \code{tol} required before declaring convergence. Only used when
 #'   \code{convergence_criteria = 'factor_change'}. Default \code{3}.
