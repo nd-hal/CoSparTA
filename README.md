@@ -10,7 +10,7 @@ Two dependencies are hosted on GitHub and must be installed first:
 
 ```r
 devtools::install_github("DongyueXie/ebpm")
-devtools::install_github("DongyueXie/smashrgen")
+devtools::install_github("xzhang0407/smashrgen")
 devtools::install_github("nd-hal/CoSparTA")
 ```
 

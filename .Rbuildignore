@@ -1,3 +1,4 @@
 ^PROGRESS_SUMMARY\.md$
 ^test_simulation\.R$
 ^test_inference_edges\.R$
+^examples$

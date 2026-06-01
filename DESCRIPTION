@@ -30,6 +30,6 @@ Suggests:
   testthat
 Remotes:
   DongyueXie/ebpm,
-  DongyueXie/smashrgen
+  xzhang0407/smashrgen
 Encoding: UTF-8
 RoxygenNote: 7.3.1
