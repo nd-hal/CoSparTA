@@ -1,0 +1,70 @@
+url: https://nd-hal.github.io/CoSparTA
+template:
+  bootstrap: 5
+
+reference:
+- title: "Decomposition"
+  desc: "Main model fitting functions"
+  contents:
+  - CoSparTA
+  - CoSparTA_missing
+
+- title: "Core Prior"
+  desc: "Empirical Bayes prior solvers"
+  contents:
+  - ebpm_point_gamma_multiplier_covariates
+  - ebpm_point_gamma_with_uq
+  - ebps_with_uq
+
+- title: "Inference"
+  desc: "Posterior uncertainty quantification"
+  contents:
+  - get_pip
+  - get_significant_patterns
+  - get_posterior_quantile
+  - get_gamma_ci
+
+- title: "Post-processing"
+  desc: "Factor extraction and manipulation"
+  contents:
+  - get_loadings
+  - normalize_factors
+  - project_tensor
+  - reconstruct_tensor
+  - match_factors
+  - select_covariates
+
+- title: "Data Utilities"
+  desc: "Tensor construction and simulation"
+  contents:
+  - build_tensor
+  - simulate_tensor
+  - init_cpapr
+
+- title: "Missing Data"
+  desc: "Missing data utilities"
+  contents:
+  - generate_missing_mask
+  - evaluate_missing_prediction
+
+- title: "Visualization"
+  desc: "Factor plotting functions"
+  contents:
+  - plot_time_factors
+  - plot_channel_factors
+  
+- title: "Data"
+  desc: "Built-in datasets"
+  contents:
+  - clickstream_synth_cov
+  - demo_covariates
+
+- title: internal
+  contents:
+  - adjLF
+  - calc_EZ_3d_cpp
+  - calc_qz_sparse_cpp
+  - log_for_ebmf
+  - mKL
+  - poisson_to_multinom
+  - ebpmf_identity_smooth_control_default

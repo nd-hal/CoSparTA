@@ -1,0 +1,227 @@
+---
+title: "CoSparTA Pipeline Walkthrough"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{CoSparTA Pipeline Walkthrough}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette walks through the complete CoSparTA analysis pipeline on a 
+synthetic clickstream dataset, from raw event logs to posterior inference 
+and visualization. The pipeline has six stages: tensor preparation, model 
+fitting, uncertainty quantification, covariate screening, post-processing, 
+and visualization.
+
+## Installation
+
+Two dependencies are hosted on GitHub and must be installed first:
+
+```{r install, eval = FALSE}
+devtools::install_github("DongyueXie/ebpm")
+devtools::install_github("DongyueXie/smashrgen")
+devtools::install_github("nd-hal/CoSparTA")
+```
+
+```{r load}
+library(CoSparTA)
+```
+
+## Stage 1: Build the Tensor
+
+Raw data typically arrive as a long-format data frame with one row per 
+observed event. `build_tensor()` converts this directly to the required 
+$n \times p \times w$ integer count tensor in a single call, handling 
+dimension labeling and ensuring all time bins are retained even if some 
+are unobserved.
+
+```{r build-tensor}
+# Load the synthetic demo data
+df <- readRDS(system.file("extdata", "demo_df.rds", package = "CoSparTA"))
+cov_df <- read.csv(system.file("extdata", "demo_covariates.csv", 
+                                package = "CoSparTA"))
+channel_groups <- readRDS(system.file("extdata", "demo_channel_groups.rds", 
+                                       package = "CoSparTA"))
+
+# Reconstruct the universe of dimension labels
+session_ids   <- sort(unique(df$session_id))
+hour_labels   <- paste0("H", sprintf("%02d", 0:99))
+channel_names <- c("Retail", "Social", "Review", "Deal", "Search")
+website_names <- as.vector(
+  outer(channel_names, paste0("_", sprintf("%02d", 1:10)), paste0)
+)
+
+# Build 1000 x 100 x 50 tensor
+tensor_out <- build_tensor(
+  data         = df,
+  row          = "session_id",
+  col          = "hour",
+  slice        = "website",
+  value        = "count",
+  row_levels   = session_ids,
+  col_levels   = hour_labels,
+  slice_levels = website_names
+)
+X <- tensor_out$X  # 1000 x 100 x 50 integer tensor
+
+# Covariate matrix: two continuous covariates
+Xcov_mat <- as.matrix(cov_df[, c("cov1", "cov2")])
+```
+
+The resulting tensor has dimensions 1000 × 100 × 50 with sparsity approximately 0.97.
+
+## Stage 2: Fit the Model
+
+`CoSparTA()` is the main entry point. Supplying `Xcov` activates 
+covariate-dependent priors on the observation mode, integrating contextual 
+information directly into the decomposition rather than as a post-hoc 
+adjustment. The rank $K$ reflects the assumed number of latent factors.
+
+An optional CP-APR warm-start via `init_cpapr()` is recommended when Python 
+is available, as it provides better initialization than random Gamma draws.
+
+```{r fit-model}
+# Optional CP-APR warm-start (requires Python with pyCP_APR)
+# python3 -m venv cosparta_env
+# source cosparta_env/bin/activate
+# pip install pyCP_APR numpy
+init_vals <- init_cpapr(X, K = 4, virtualenv = "cosparta_env")
+
+# Covariate-aware fit
+fit <- CoSparTA(
+  X        = X,
+  K        = 4,
+  Xcov     = Xcov_mat,
+  init     = init_vals,   # or "random_gamma" if Python unavailable
+  maxiter  = 20,
+  convergence_criteria = "factor_change",
+  tol      = 1e-6,
+  verbose  = TRUE
+)
+
+# Retrieve outputs via the unified getter
+U1     <- get_loadings(fit, "U1")      # 1000 x 4 normalized loadings
+U2     <- get_loadings(fit, "U2")      # 100  x 4 time factors
+U3     <- get_loadings(fit, "U3")      # 50   x 4 channel weights
+lambda <- get_loadings(fit, "weight")  # length-4 factor weights
+gamma  <- get_loadings(fit, "gamma")   # list of 4 covariate coefficient vectors
+```
+
+When covariate effects are expected to differ across factors, rank-specific 
+covariate sets can be supplied as a list. For instance, factor 1 receives 
+both covariates, factor 2 is left covariate-free, while factors 3 and 4 
+each receive a different covariate:
+
+```{r rank-specific}
+Xcov_cov1 <- Xcov_mat[, 1, drop = FALSE]
+Xcov_cov2 <- Xcov_mat[, 2, drop = FALSE]
+
+fit_rankspec <- CoSparTA(
+  X    = X,
+  K    = 4,
+  Xcov = list(Xcov_mat, NULL, Xcov_cov1, Xcov_cov2),
+  init = init_vals,
+  convergence_criteria = "factor_change"
+)
+```
+
+Missing entries are handled by `CoSparTA_missing()`, which restricts the 
+likelihood to observed entries:
+
+```{r missing}
+mask     <- generate_missing_mask(X, missing_rate = 0.10)
+fit_miss <- CoSparTA_missing(
+  X        = X,
+  K        = 4,
+  Xcov     = Xcov_mat,
+  obs_mask = mask$obs_mask,
+  convergence_criteria = "factor_change"
+)
+```
+
+## Stage 3: Uncertainty Quantification
+
+Because the variational posterior retains the spike-and-slab structure of 
+the prior, exact posterior credible intervals are available in closed form 
+via `get_posterior_quantile()`.
+
+```{r uq}
+# Exact 95% posterior credible intervals for channel mode (U3)
+ci_w <- get_posterior_quantile(fit, probs = c(0.025, 0.975), mode = "W")
+# ci_w$q2.5, ci_w$q97.5  -- 50 x 4 lower and upper bounds
+
+# Delta-method confidence intervals for covariate coefficients
+ci_gamma <- get_gamma_ci(fit, level = 0.95)
+# ci_gamma[[k]]$estimate, $se, $lower, $upper, $pvalue
+print(ci_gamma[[1]])  # factor 1 results
+```
+
+## Stage 4: Covariate Screening
+
+When the covariate set is large, `select_covariates()` provides an initial 
+screening step. It fits a covariate-free model first, then regresses the 
+observation-mode loadings on the covariates and flags those significant at 
+$p < 0.05$ per factor. The selected covariates can then be passed to 
+`CoSparTA()` via the list interface shown in Stage 2.
+
+```{r screening}
+# Step 1: fit covariate-free model
+fit_unsup <- CoSparTA(
+  X                    = X,
+  K                    = 4,
+  Xcov                 = NULL,
+  init                 = init_vals,
+  convergence_criteria = "factor_change"
+)
+
+# Step 2: screen covariates
+sel <- select_covariates(
+  K              = 4,
+  covariate_data = as.data.frame(Xcov_mat),
+  fit            = fit_unsup
+)
+
+# sel$selected: list of selected covariate indices per factor
+print(sel$selected)
+```
+
+## Stage 5: Post-processing
+
+`project_tensor()` scores new observations onto the estimated factor space 
+without refitting the model. `reconstruct_tensor()` returns the denoised 
+Poisson mean tensor $\hat{\mu}$.
+
+```{r postprocessing}
+# Project held-out sessions onto the factor space
+X_new <- X[991:1000, , ]
+F_new <- project_tensor(X_new, fit)  # 10 x 4 score matrix
+
+# Reconstruct the denoised Poisson mean tensor
+X_hat <- reconstruct_tensor(fit)     # 1000 x 100 x 50
+```
+
+## Stage 6: Visualization
+
+Because non-negative CP decomposition is essentially unique 
+(Kolda and Bader 2009), the extracted factor matrices carry a direct 
+physical interpretation — each column represents a genuinely distinct 
+latent behavioral pattern. Two dedicated plotting functions produce 
+`ggplot2` figures for the time and channel factor matrices:
+
+```{r visualization, fig.width = 7, fig.height = 4}
+# Faceted line plot of K time factors
+plot_time_factors(fit, time_labels = hour_labels)
+
+# Faceted bar plot of K channel factors with category grouping
+plot_channel_factors(fit,
+                     channel_names  = website_names,
+                     channel_groups = channel_groups)
+```
