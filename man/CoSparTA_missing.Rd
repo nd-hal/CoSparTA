@@ -23,7 +23,6 @@ CoSparTA_missing(
   smooth_F = TRUE,
   printevery = 10,
   verbose = TRUE,
-  adj_LF_scale = TRUE,
   convergence_criteria = "ELBO",
   n_stable = 3L,
   U1_true = NULL,
@@ -78,9 +77,6 @@ Default uses \code{ebpm_point_gamma_multiplier_covariates} for L,
 \code{10}.}
 
 \item{verbose}{Logical. Print progress. Default \code{TRUE}.}
-
-\item{adj_LF_scale}{Logical. Rescale L and F each iteration. Default
-\code{TRUE}.}
 
 \item{convergence_criteria}{Convergence criterion: \code{'ELBO'} (default)
 or \code{'mKLabs'}.}

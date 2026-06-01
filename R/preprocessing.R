@@ -104,10 +104,10 @@
 #' # Ensure all 48 time slots are present even if some are empty
 #' tensor_out <- build_tensor(
 #'   data       = df,
-#'   user_col   = "session_id",
-#'   time_col   = "hour",
-#'   chan_col   = "website",
-#'   count_col  = "count",
+#'   row        = "session_id",
+#'   col        = "hour",
+#'   slice      = "website",
+#'   value      = "count",
 #'   col_levels = paste0("H", sprintf("%02d", 0:47))
 #' )
 #' }

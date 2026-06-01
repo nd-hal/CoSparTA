@@ -197,8 +197,6 @@ evaluate_missing_prediction <- function(fit, missing_info) {
 #' @param printevery Print progress every this many iterations. Default
 #'   \code{10}.
 #' @param verbose Logical. Print progress. Default \code{TRUE}.
-#' @param adj_LF_scale Logical. Rescale L and F each iteration. Default
-#'   \code{TRUE}.
 #' @param convergence_criteria Convergence criterion: \code{'ELBO'} (default)
 #'   or \code{'mKLabs'}.
 #' @param U1_true Optional true L matrix for simulation evaluation.
@@ -247,7 +245,6 @@ CoSparTA_missing <- function(X, K, Xcov = NULL,
                              smooth_F = TRUE,
                              printevery = 10,
                              verbose = TRUE,
-                             adj_LF_scale = TRUE,
                              convergence_criteria = 'ELBO',
                              n_stable = 3L,
                              U1_true = NULL, U2_true = NULL, U3_true = NULL) {
