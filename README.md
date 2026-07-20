@@ -2,6 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> **Julia port:** This repository is also a native Julia package. See
+> [JULIA_README.md](JULIA_README.md) for installation, API mapping, and a full
+> example. The original R implementation remains available unchanged.
+
 An R package for **Covariate-Aware Sparsity-Adaptive Tensor Analysis** of sparse count tensors with an empirical Bayes approach. CoSparTA fits a Poisson CP decomposition with factor-specific spike-and-slab priors and incorporates observation-level covariates directly into the generative model, enabling simultaneous factor recovery, covariate effect estimation, and posterior uncertainty quantification.
 
 ## Installation
