@@ -52,7 +52,8 @@ reference:
   contents:
   - plot_time_factors
   - plot_channel_factors
-  
+  - dash
+
 - title: "Data"
   desc: "Built-in datasets"
   contents:

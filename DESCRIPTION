@@ -27,7 +27,9 @@ LinkingTo:
 Suggests:
   clue,
   reticulate,
-  testthat
+  testthat,
+  quarto,
+  shiny
 Remotes:
   DongyueXie/ebpm,
   xzhang0407/smashrgen

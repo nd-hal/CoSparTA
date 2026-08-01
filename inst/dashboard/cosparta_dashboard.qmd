@@ -1,0 +1,164 @@
+---
+title: "CoSparTA Fit Explorer"
+format: dashboard
+server: shiny
+---
+
+```{r}
+#| context: setup
+
+library(shiny)
+library(ggplot2)
+library(CoSparTA)
+
+.dash_input   <- readRDS("dash_data.rds")
+fit           <- .dash_input$fit
+channel_names <- .dash_input$channel_names
+time_labels   <- .dash_input$time_labels
+
+K <- ncol(fit$res$ql$El_normed)
+
+# Replicates scales::hue_pal()'s default algorithm (without adding a
+# dependency on scales) so panel 3's per-rank colors match the discrete
+# palette ggplot2 uses by default in panels 1-2 when all K components are
+# shown, then stays keyed by rank index on non-contiguous subsets.
+.hue_pal <- function(n, h = c(0, 360) + 15, c = 100, l = 65,
+                      h.start = 0, direction = 1) {
+  if ((diff(h) %% 360) < 1) h[2] <- h[2] - 360 / n
+  rotate <- function(x) (x + h.start) %% 360 * direction
+  grDevices::hcl(h = rotate(seq(h[1], h[2], length.out = n)), c = c, l = l)
+}
+palette_full <- stats::setNames(.hue_pal(K), as.character(seq_len(K)))
+
+gl_normed <- fit$res$gl_normed
+.gamma_len <- function(g) {
+  if (!is.null(g) && !is.null(g$type) && identical(g$type, "covariate_dependent")) {
+    length(g$gamma)
+  } else {
+    0L
+  }
+}
+q_max <- max(vapply(gl_normed, .gamma_len, integer(1)), 0L)
+any_supervised_fit <- q_max > 0
+```
+
+## {.sidebar}
+
+```{r}
+checkboxGroupInput(
+  "ranks",
+  "Components",
+  choices  = stats::setNames(as.character(seq_len(K)), paste0("Rank ", seq_len(K))),
+  selected = as.character(seq_len(K))
+)
+```
+
+## Main
+
+<!--
+A level-2 heading is required here (rather than starting the rows directly
+at level 2) because a page-level sidebar itself occupies a level-2 slot as a
+column; without this wrapper, the Row/Column headings below would be
+mis-parsed as page-level columns instead of rows. See
+https://github.com/quarto-dev/quarto-cli/issues/8021.
+
+Row/Column heading text must also be unique across the document — reusing
+identical text (e.g. "Row" for every row) makes Quarto's dashboard layout
+silently collapse later duplicates from side-by-side columns into stacked
+full-width rows, with no error. Each Row/Column heading below is therefore
+given distinct text even though that text itself is otherwise discarded.
+-->
+
+### Patterns Row {height="50%"}
+
+#### Temporal Column {width="50%"}
+
+```{r}
+#| title: "Temporal pattern"
+plotOutput("time_plot")
+```
+
+#### Channel Column {width="50%"}
+
+```{r}
+#| title: "Channel pattern"
+plotOutput("channel_plot")
+```
+
+### Weight and Gamma Row {height="30%"}
+
+#### Weight Column {width="40%"}
+
+```{r}
+#| title: "Component weight"
+plotOutput("weight_plot")
+```
+
+#### Gamma Column {width="60%"}
+
+```{r}
+#| title: "Gamma coefficients"
+if (any_supervised_fit) {
+  tableOutput("gamma_table")
+} else {
+  tags$p("This fit is fully unsupervised — no covariate-dependent components to display.")
+}
+```
+
+```{r}
+#| context: server
+
+ranks_sel <- reactive({
+  req(input$ranks)
+  sort(as.integer(input$ranks))
+})
+
+output$time_plot <- renderPlot({
+  plot_time_factors(fit, ranks = ranks_sel(), time_labels = time_labels)
+})
+
+output$channel_plot <- renderPlot({
+  plot_channel_factors(fit, ranks = ranks_sel(), channel_names = channel_names,
+                        show_names = !is.null(channel_names))
+})
+
+output$weight_plot <- renderPlot({
+  rs <- ranks_sel()
+  df <- data.frame(
+    rank     = rs,
+    rank_lab = factor(paste0("R", rs), levels = paste0("R", rs)),
+    value    = fit$res$lambda_normed[rs]
+  )
+  ggplot(df, aes(x = rank_lab, y = value, group = 1)) +
+    geom_line(color = "grey60", linewidth = 0.6) +
+    geom_point(aes(color = factor(rank, levels = seq_len(K))), size = 3) +
+    scale_color_manual(values = palette_full, name = "Rank") +
+    labs(x = NULL, y = "Component weight") +
+    theme_minimal()
+})
+
+if (any_supervised_fit) {
+  output$gamma_table <- renderTable({
+    rs        <- ranks_sel()
+    col_names <- paste0("V", seq_len(q_max))
+
+    rows <- lapply(rs, function(k) {
+      g          <- gl_normed[[k]]
+      supervised <- !is.null(g) && !is.null(g$type) &&
+        identical(g$type, "covariate_dependent")
+      if (supervised) {
+        vals <- g$gamma
+        length(vals) <- q_max
+        note <- ""
+      } else {
+        vals <- rep(NA_real_, q_max)
+        note <- "no covariates for this component"
+      }
+      c(list(Rank = paste0("R", k), Note = note),
+        stats::setNames(as.list(vals), col_names))
+    })
+
+    do.call(rbind.data.frame, c(rows, list(stringsAsFactors = FALSE)))
+  }, na = "", digits = 3, striped = TRUE, bordered = TRUE)
+}
+```

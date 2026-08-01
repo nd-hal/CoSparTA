@@ -222,7 +222,7 @@ plot_channel_factors <- function(fit = NULL, ranks = NULL, channel_names = NULL,
 
     p <- ggplot(df, aes_string(x = x_var, y = "value", fill = "rank")) +
       geom_bar(stat = "identity") +
-      facet_wrap(~ rank, scales = "free_y", ncol = 1) +
+      facet_wrap(~ rank, scales = "free_y", ncol = 1, strip.position = "right") +
       xlab("Channels") +
       ylab("Loading") +
       base_theme +

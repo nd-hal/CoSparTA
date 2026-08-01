@@ -2,3 +2,4 @@
 ^test_simulation\.R$
 ^test_inference_edges\.R$
 ^examples$
+^\.github$
