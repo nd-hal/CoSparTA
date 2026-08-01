@@ -81,6 +81,8 @@ Factor plotting functions
   : Plot Time-Mode Factors
 - [`plot_channel_factors()`](https://nd-hal.github.io/CoSparTA/reference/plot_channel_factors.md)
   : Plot Channel-Mode Factors
+- [`dash()`](https://nd-hal.github.io/CoSparTA/reference/dash.md) :
+  Launch an Interactive Fit-Explorer Dashboard
 
 ## Data
 
