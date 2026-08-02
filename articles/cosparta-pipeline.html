@@ -267,6 +267,25 @@ matrices:</p>
 <span>                     channel_names  <span class="op">=</span> <span class="va">website_names</span>,</span>
 <span>                     channel_groups <span class="op">=</span> <span class="va">channel_groups</span><span class="op">)</span></span></code></pre></div>
 </div>
+<div class="section level2">
+<h2 id="stage-7-interactive-exploration">Stage 7: Interactive Exploration<a class="anchor" aria-label="anchor" href="#stage-7-interactive-exploration"></a>
+</h2>
+<p>For interactive exploration beyond the static <code>ggplot2</code>
+figures above, <code><a href="../reference/dash.html">dash()</a></code> launches a local Quarto dashboard
+backed by Shiny. The dashboard lays out the temporal and channel factor
+patterns from Stage 6 alongside two new panels — a component-weight
+chart and a table of covariate (gamma) coefficients — and a sidebar
+checkbox control lets you toggle which components are shown, with all
+four panels updating live.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Launch the interactive fit-explorer dashboard (requires the Quarto CLI)</span></span>
+<span><span class="fu"><a href="../reference/dash.html">dash</a></span><span class="op">(</span><span class="va">fit</span>,</span>
+<span>     channel_names <span class="op">=</span> <span class="va">website_names</span>,</span>
+<span>     time_labels   <span class="op">=</span> <span class="va">hour_labels</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/dash.html">dash()</a></code> blocks the R console while the dashboard is open,
+the same way <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code> does; stop the server to
+return control to the console.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>

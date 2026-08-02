@@ -232,3 +232,26 @@ plot_channel_factors(fit,
                      channel_names  = website_names,
                      channel_groups = channel_groups)
 ```
+
+## Stage 7: Interactive Exploration
+
+For interactive exploration beyond the static `ggplot2` figures above,
+[`dash()`](https://nd-hal.github.io/CoSparTA/reference/dash.md) launches
+a local Quarto dashboard backed by Shiny. The dashboard lays out the
+temporal and channel factor patterns from Stage 6 alongside two new
+panels — a component-weight chart and a table of covariate (gamma)
+coefficients — and a sidebar checkbox control lets you toggle which
+components are shown, with all four panels updating live.
+
+``` r
+
+# Launch the interactive fit-explorer dashboard (requires the Quarto CLI)
+dash(fit,
+     channel_names = website_names,
+     time_labels   = hour_labels)
+```
+
+[`dash()`](https://nd-hal.github.io/CoSparTA/reference/dash.md) blocks
+the R console while the dashboard is open, the same way
+[`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html) does;
+stop the server to return control to the console.
