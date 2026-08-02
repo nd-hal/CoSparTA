@@ -202,6 +202,13 @@ plot_channel_factors(fit,
                      channel_groups = channel_groups)
 ```
 
+### Stage 7: Interactive exploration
+
+```r
+# Launch an interactive dashboard (temporal/channel/weight panels + gamma table)
+dash(fit, channel_names = website_names, time_labels = 1:100)
+```
+
 ## Questions?
 
 Let me know if you have any requests, bugs, etc.

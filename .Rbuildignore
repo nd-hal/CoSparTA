@@ -3,3 +3,6 @@
 ^test_inference_edges\.R$
 ^examples$
 ^\.github$
+^_pkgdown\.yml$
+^doc$
+^Meta$

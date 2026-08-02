@@ -29,9 +29,12 @@ Suggests:
   reticulate,
   testthat,
   quarto,
-  shiny
+  shiny,
+  knitr,
+  rmarkdown
 Remotes:
   DongyueXie/ebpm,
   xzhang0407/smashrgen
 Encoding: UTF-8
 RoxygenNote: 7.3.1
+VignetteBuilder: knitr
