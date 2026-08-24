@@ -276,15 +276,25 @@ backed by Shiny. The dashboard lays out the temporal and channel factor
 patterns from Stage 6 alongside two new panels — a component-weight
 chart and a table of covariate (gamma) coefficients — and a sidebar
 checkbox control lets you toggle which components are shown, with all
-four panels updating live.</p>
+four panels updating live. <code>channel_groups</code> and
+<code>covariate_names</code> label the channel panel and the gamma
+table’s columns, the same way <code>channel_names</code> and
+<code>Xcov</code>’s own column names do elsewhere in the pipeline.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Launch the interactive fit-explorer dashboard (requires the Quarto CLI)</span></span>
 <span><span class="fu"><a href="../reference/dash.html">dash</a></span><span class="op">(</span><span class="va">fit</span>,</span>
-<span>     channel_names <span class="op">=</span> <span class="va">website_names</span>,</span>
-<span>     time_labels   <span class="op">=</span> <span class="va">hour_labels</span><span class="op">)</span></span></code></pre></div>
+<span>     channel_names   <span class="op">=</span> <span class="va">website_names</span>,</span>
+<span>     time_labels     <span class="op">=</span> <span class="va">hour_labels</span>,</span>
+<span>     channel_groups  <span class="op">=</span> <span class="va">channel_groups</span>,</span>
+<span>     covariate_names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cov1"</span>, <span class="st">"cov2"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/dash.html">dash()</a></code> blocks the R console while the dashboard is open,
 the same way <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code> does; stop the server to
-return control to the console.</p>
+return control to the console. Like the plotting functions above,
+<code><a href="../reference/dash.html">dash()</a></code> also accepts raw factor matrices (<code>Ef</code>,
+<code>Ew</code>, <code>lambda</code>, <code>gamma_list</code>) in place
+of <code>fit</code>, and a per-component list for
+<code>covariate_names</code> when components have different covariate
+sets — see <code><a href="../reference/dash.html">?dash</a></code> for the full interface.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

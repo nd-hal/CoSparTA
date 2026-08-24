@@ -242,16 +242,28 @@ temporal and channel factor patterns from Stage 6 alongside two new
 panels — a component-weight chart and a table of covariate (gamma)
 coefficients — and a sidebar checkbox control lets you toggle which
 components are shown, with all four panels updating live.
+`channel_groups` and `covariate_names` label the channel panel and the
+gamma table’s columns, the same way `channel_names` and `Xcov`’s own
+column names do elsewhere in the pipeline.
 
 ``` r
 
 # Launch the interactive fit-explorer dashboard (requires the Quarto CLI)
 dash(fit,
-     channel_names = website_names,
-     time_labels   = hour_labels)
+     channel_names   = website_names,
+     time_labels     = hour_labels,
+     channel_groups  = channel_groups,
+     covariate_names = c("cov1", "cov2"))
 ```
 
 [`dash()`](https://nd-hal.github.io/CoSparTA/reference/dash.md) blocks
 the R console while the dashboard is open, the same way
 [`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html) does;
-stop the server to return control to the console.
+stop the server to return control to the console. Like the plotting
+functions above,
+[`dash()`](https://nd-hal.github.io/CoSparTA/reference/dash.md) also
+accepts raw factor matrices (`Ef`, `Ew`, `lambda`, `gamma_list`) in
+place of `fit`, and a per-component list for `covariate_names` when
+components have different covariate sets — see
+[`?dash`](https://nd-hal.github.io/CoSparTA/reference/dash.md) for the
+full interface.
