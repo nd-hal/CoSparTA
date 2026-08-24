@@ -4,11 +4,25 @@
 \alias{dash}
 \title{Launch an Interactive Fit-Explorer Dashboard}
 \usage{
-dash(fit, channel_names = NULL, time_labels = NULL)
+dash(
+  fit = NULL,
+  channel_names = NULL,
+  time_labels = NULL,
+  channel_groups = NULL,
+  covariate_names = NULL,
+  Ef = NULL,
+  Ew = NULL,
+  lambda = NULL,
+  gamma_list = NULL,
+  intercept = TRUE
+)
 }
 \arguments{
 \item{fit}{A fitted object returned by \code{\link{CoSparTA}} or
-\code{\link{CoSparTA_missing}}.}
+\code{\link{CoSparTA_missing}}. Either \code{fit} or all of \code{Ef},
+\code{Ew}, and \code{lambda} must be supplied. \code{fit$res$ql$El_normed}
+(per-observation loadings) is never read — the dashboard has no
+observation-mode panel.}
 
 \item{channel_names}{Character vector of channel labels, forwarded to
 \code{\link{plot_channel_factors}}. Fixed at launch; not adjustable from
@@ -17,6 +31,71 @@ the dashboard. Default \code{NULL}.}
 \item{time_labels}{Numeric vector of time-axis labels, forwarded to
 \code{\link{plot_time_factors}}. Fixed at launch; not adjustable from
 the dashboard. Default \code{NULL}.}
+
+\item{channel_groups}{Character vector of group labels for each channel,
+forwarded to \code{\link{plot_channel_factors}}'s \code{channel_groups}
+argument (e.g. \code{c(rep("TextEmo", 5), rep("Gaze", 25))}). Fixed at
+launch; not adjustable from the dashboard. Default \code{NULL}.}
+
+\item{covariate_names}{Names for the gamma table's covariate columns.
+When \code{intercept = TRUE} (the default), these describe every
+column except the always-present, always-first \code{"Intercept"}
+column. When \code{intercept = FALSE}, there is no \code{"Intercept"}
+column and these describe every column. Two forms are accepted,
+mirroring the \code{Xcov} convention used elsewhere in the package:
+\describe{
+  \item{a character vector}{applied to every supervised component.
+    Requires all supervised components to have the same number of
+    covariates; errors with a clear message otherwise (use the list
+    form instead when they differ).}
+  \item{a list of length \code{K}}{per-component names.
+    \code{covariate_names[[k]]} must have length
+    \code{length(gamma_list[[k]]) - 1} when \code{intercept = TRUE},
+    or exactly \code{length(gamma_list[[k]])} when
+    \code{intercept = FALSE}. Entries for unsupervised components are
+    ignored.}
+}
+Default \code{NULL} uses generic \code{"V1"}, \code{"V2"}, ... labels.
+Works with either input path, including the \code{fit} path.}
+
+\item{Ef}{Numeric matrix of dimensions \code{p x K} (time factor matrix,
+already normalized — e.g. \code{fit$res$qf$Ef_normed} or
+\code{normalize_factors(fit)$Ef}). Supply together with \code{Ew} and
+\code{lambda} to bypass \code{fit}, mirroring the \code{Ef}/\code{Ew}
+raw-matrix path already supported by \code{\link{plot_time_factors}}
+and \code{\link{plot_channel_factors}}.}
+
+\item{Ew}{Numeric matrix of dimensions \code{w x K} (channel factor
+matrix, already normalized). Supply together with \code{Ef} and
+\code{lambda} to bypass \code{fit}.}
+
+\item{lambda}{Numeric vector of length \code{K} giving component weights
+(used by the component-weight panel). Supply together with \code{Ef}
+and \code{Ew} to bypass \code{fit}.}
+
+\item{gamma_list}{List of length \code{K} of covariate coefficient
+vectors, one per component, in the same format returned by
+\code{\link{normalize_factors}}'s \code{gamma_list}: each element is
+either a numeric vector (whose first entry is the intercept when
+\code{intercept = TRUE}, or is itself a covariate coefficient when
+\code{intercept = FALSE}) or a scalar \code{NA} for a component with no
+covariates. \code{NULL} (the default) means every component is
+unsupervised. Only used when bypassing \code{fit}; ignored (and derived
+from \code{fit$res$gl_normed} instead) when \code{fit} is supplied.}
+
+\item{intercept}{Logical. Whether each element of \code{gamma_list}
+begins with an intercept term. Default \code{TRUE}: \code{gamma_list[[k]][1]}
+is the intercept, \code{covariate_names[[k]]} describes the remaining
+entries, and the gamma table's first column is always labeled
+\code{"Intercept"}. Set to \code{FALSE} for fits where \code{Xcov} was
+supplied without an intercept column, so \code{gamma_list[[k]]} is
+entirely covariate coefficients: \code{covariate_names[[k]]} must then
+match its length exactly, and the gamma table has no \code{"Intercept"}
+column. If left at its default and \code{covariate_names} lengths match
+\code{gamma_list} lengths exactly rather than length \code{- 1}, this is
+unambiguous evidence of a no-intercept fit: \code{dash()} switches to
+\code{intercept = FALSE} automatically and warns, rather than erroring.
+Pass \code{intercept = FALSE} explicitly to silence that warning.}
 }
 \value{
 Invisibly, the path to the temporary \code{.qmd} file used to
@@ -25,31 +104,35 @@ Invisibly, the path to the temporary \code{.qmd} file used to
 }
 \description{
 Launches a local, interactive Quarto dashboard for exploring a fitted
-\code{\link{CoSparTA}} / \code{\link{CoSparTA_missing}} object. The
-dashboard shows the temporal factor pattern
-(\code{\link{plot_time_factors}}), the channel factor pattern
-(\code{\link{plot_channel_factors}}), a component-weight chart, and a
-table of covariate (gamma) coefficients, all restricted to a set of
-components selected via checkboxes.
+\code{\link{CoSparTA}} / \code{\link{CoSparTA_missing}} object, or a set
+of raw (already normalized) factor matrices. The dashboard shows the
+temporal factor pattern (\code{\link{plot_time_factors}}), the channel
+factor pattern (\code{\link{plot_channel_factors}}), a component-weight
+chart, and a table of covariate (gamma) coefficients, all restricted to
+a set of components selected via checkboxes.
 }
 \details{
 The dashboard is a Quarto document (\code{format: dashboard},
 \code{server: shiny}) bundled with the package at
-\code{inst/dashboard/cosparta_dashboard.qmd}. \code{dash()} saves
-\code{fit} (together with \code{channel_names} and \code{time_labels}) to
-a temporary \code{.rds} file next to a copy of the template, then calls
-\code{\link[quarto]{quarto_preview}}, which starts a local Shiny-backed
-server and opens a browser tab.
+\code{inst/dashboard/cosparta_dashboard.qmd}. \code{dash()} resolves
+\code{Ef}, \code{Ew}, \code{lambda}, and \code{gamma_list} — either
+directly from the arguments of the same name, or extracted from
+\code{fit} — saves them (together with \code{channel_names},
+\code{time_labels}, \code{channel_groups}, and the resolved
+\code{covariate_names}) to a temporary \code{.rds} file next to a copy
+of the template, then calls \code{\link[quarto]{quarto_preview}}, which
+starts a local Shiny-backed server and opens a browser tab.
 
 This call blocks the R console for as long as the dashboard is open —
-the same behavior as \code{shiny::runApp()}. That is expected, not a bug.
-Stop the server (e.g. Escape in RStudio, or Ctrl+C in a terminal) to
-return control to the console.
+the same behavior as \code{shiny::runApp()}. That is expected, not a
+bug. Stop the server (e.g. Escape in RStudio, or Ctrl+C in a terminal)
+to return control to the console.
 
 The only interactive control is a checkbox group for selecting which
 components (ranks) to display; all four panels re-render from that
-selection. \code{channel_names} and \code{time_labels} are read once at
-launch and are not exposed as dashboard inputs.
+selection. \code{channel_names}, \code{time_labels}, \code{channel_groups},
+and \code{covariate_names} are read once at launch and are not exposed
+as dashboard inputs.
 
 Requires a local Quarto CLI installation. If it is not found, install it
 from \url{https://quarto.org/docs/get-started/}.
@@ -59,10 +142,23 @@ from \url{https://quarto.org/docs/get-started/}.
 fit <- CoSparTA(X, K = 3, Xcov = Xcov)
 dash(fit, channel_names = c("Retail", "Social", "Search"),
      time_labels = seq(0, 600, length.out = 20))
+
+# Raw-matrix path, bypassing fit (e.g. after normalize_factors())
+nf <- normalize_factors(fit)
+dash(Ef = nf$Ef, Ew = nf$Ew, lambda = nf$lambda, gamma_list = nf$gamma_list,
+     covariate_names = c("age", "income"))
+
+# Per-component covariate names, differing counts across components
+dash(fit, covariate_names = list(c("age", "income"), NULL, c("region")))
+
+# Fit without an intercept in Xcov: gamma_list[[k]] is all covariates
+dash(Ef = nf$Ef, Ew = nf$Ew, lambda = nf$lambda, gamma_list = nf$gamma_list,
+     covariate_names = c("age", "income"), intercept = FALSE)
 }
 
 }
 \seealso{
 \code{\link{plot_time_factors}}, \code{\link{plot_channel_factors}},
-  \code{\link{CoSparTA}}, \code{\link{CoSparTA_missing}}
+  \code{\link{normalize_factors}}, \code{\link{CoSparTA}},
+  \code{\link{CoSparTA_missing}}
 }

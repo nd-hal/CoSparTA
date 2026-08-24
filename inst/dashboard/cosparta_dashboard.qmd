@@ -11,12 +11,18 @@ library(shiny)
 library(ggplot2)
 library(CoSparTA)
 
-.dash_input   <- readRDS("dash_data.rds")
-fit           <- .dash_input$fit
-channel_names <- .dash_input$channel_names
-time_labels   <- .dash_input$time_labels
+.dash_input     <- readRDS("dash_data.rds")
+Ef              <- .dash_input$Ef
+Ew              <- .dash_input$Ew
+lambda          <- .dash_input$lambda
+gamma_list      <- .dash_input$gamma_list
+channel_names   <- .dash_input$channel_names
+time_labels     <- .dash_input$time_labels
+channel_groups  <- .dash_input$channel_groups
+covariate_names <- .dash_input$covariate_names
+intercept       <- isTRUE(.dash_input$intercept)
 
-K <- ncol(fit$res$ql$El_normed)
+K <- ncol(Ef)
 
 # Replicates scales::hue_pal()'s default algorithm (without adding a
 # dependency on scales) so panel 3's per-rank colors match the discrete
@@ -30,16 +36,59 @@ K <- ncol(fit$res$ql$El_normed)
 }
 palette_full <- stats::setNames(.hue_pal(K), as.character(seq_len(K)))
 
-gl_normed <- fit$res$gl_normed
 .gamma_len <- function(g) {
-  if (!is.null(g) && !is.null(g$type) && identical(g$type, "covariate_dependent")) {
-    length(g$gamma)
-  } else {
-    0L
-  }
+  if (is.null(g) || (length(g) == 1L && is.na(g))) 0L else length(g)
 }
-q_max <- max(vapply(gl_normed, .gamma_len, integer(1)), 0L)
+gamma_lens <- vapply(seq_len(K), function(k) {
+  if (is.null(gamma_list)) 0L else .gamma_len(gamma_list[[k]])
+}, integer(1))
+q_max <- max(gamma_lens, 0L)
 any_supervised_fit <- q_max > 0
+
+# Covariate names for component k (length gamma_lens[k] - 1 when `intercept`
+# is TRUE, gamma_lens[k] when FALSE), taken only from covariate_names[[k]]
+# (or a per-component generic fallback) -- never borrowed from another
+# component's names.
+.dash_component_covariate_names <- function(k) {
+  q <- if (intercept) gamma_lens[k] - 1L else gamma_lens[k]
+  if (q <= 0L) return(character(0))
+  nm <- if (!is.null(covariate_names)) covariate_names[[k]] else NULL
+  if (!is.null(nm)) nm else paste0("V", seq_len(q))
+}
+
+supervised_idx <- which(gamma_lens > 0L)
+names_by_comp  <- stats::setNames(
+  lapply(supervised_idx, .dash_component_covariate_names),
+  as.character(supervised_idx)
+)
+
+# Safety fallback: if no two supervised components ever share a covariate
+# name, a name-keyed union table would be wide with each row's values
+# scattered along a near-diagonal block of otherwise-blank columns. Per-row
+# "name: value" pairs communicate the same information far more compactly
+# in that case. When names overlap at all (the expected case), the union
+# table below keys every value by its own covariate name.
+.all_pairs_disjoint <- function(names_by_comp) {
+  n <- length(names_by_comp)
+  if (n < 2L) return(FALSE)
+  pairs <- utils::combn(n, 2, simplify = FALSE)
+  all(vapply(pairs, function(p) {
+    length(intersect(names_by_comp[[p[1]]], names_by_comp[[p[2]]])) == 0L
+  }, logical(1)))
+}
+gamma_table_mode <- if (any_supervised_fit && .all_pairs_disjoint(names_by_comp)) {
+  "pairs"
+} else {
+  "union"
+}
+
+# Columns for "union" mode: the union of distinct covariate names across all
+# supervised components, keyed by name and ordered by first appearance.
+gamma_col_names <- if (gamma_table_mode == "union") {
+  Reduce(function(acc, nm) union(acc, nm), names_by_comp, character(0))
+} else {
+  character(0)
+}
 ```
 
 ## {.sidebar}
@@ -114,11 +163,14 @@ ranks_sel <- reactive({
 })
 
 output$time_plot <- renderPlot({
-  plot_time_factors(fit, ranks = ranks_sel(), time_labels = time_labels)
+  plot_time_factors(Ef = Ef, lambda = lambda, ranks = ranks_sel(),
+                     time_labels = time_labels)
 })
 
 output$channel_plot <- renderPlot({
-  plot_channel_factors(fit, ranks = ranks_sel(), channel_names = channel_names,
+  plot_channel_factors(Ew = Ew, lambda = lambda, ranks = ranks_sel(),
+                        channel_names = channel_names,
+                        channel_groups = channel_groups,
                         show_names = !is.null(channel_names))
 })
 
@@ -127,7 +179,7 @@ output$weight_plot <- renderPlot({
   df <- data.frame(
     rank     = rs,
     rank_lab = factor(paste0("R", rs), levels = paste0("R", rs)),
-    value    = fit$res$lambda_normed[rs]
+    value    = lambda[rs]
   )
   ggplot(df, aes(x = rank_lab, y = value, group = 1)) +
     geom_line(color = "grey60", linewidth = 0.6) +
@@ -139,26 +191,54 @@ output$weight_plot <- renderPlot({
 
 if (any_supervised_fit) {
   output$gamma_table <- renderTable({
-    rs        <- ranks_sel()
-    col_names <- paste0("V", seq_len(q_max))
+    rs <- ranks_sel()
 
-    rows <- lapply(rs, function(k) {
-      g          <- gl_normed[[k]]
-      supervised <- !is.null(g) && !is.null(g$type) &&
-        identical(g$type, "covariate_dependent")
-      if (supervised) {
-        vals <- g$gamma
-        length(vals) <- q_max
-        note <- ""
-      } else {
-        vals <- rep(NA_real_, q_max)
-        note <- "no covariates for this component"
-      }
-      c(list(Rank = paste0("R", k), Note = note),
-        stats::setNames(as.list(vals), col_names))
-    })
-
-    do.call(rbind.data.frame, c(rows, list(stringsAsFactors = FALSE)))
+    if (gamma_table_mode == "union") {
+      rows <- lapply(rs, function(k) {
+        g <- if (is.null(gamma_list)) NULL else gamma_list[[k]]
+        vals <- rep(NA_real_, length(gamma_col_names))
+        if (.gamma_len(g) > 0) {
+          nm_k <- .dash_component_covariate_names(k)
+          covariate_vals <- if (intercept) g[-1] else g
+          if (length(nm_k) > 0) {
+            vals[match(nm_k, gamma_col_names)] <- covariate_vals
+          }
+          intercept_val <- if (intercept) g[1] else NULL
+          note <- ""
+        } else {
+          intercept_val <- if (intercept) NA_real_ else NULL
+          note <- "no covariates for this component"
+        }
+        row <- list(Rank = paste0("R", k), Note = note)
+        if (intercept) row$Intercept <- intercept_val
+        c(row, stats::setNames(as.list(vals), gamma_col_names))
+      })
+      do.call(rbind.data.frame, c(rows, list(stringsAsFactors = FALSE)))
+    } else {
+      rows <- lapply(rs, function(k) {
+        g <- if (is.null(gamma_list)) NULL else gamma_list[[k]]
+        if (.gamma_len(g) > 0) {
+          nm_k <- .dash_component_covariate_names(k)
+          covariate_vals <- if (intercept) g[-1] else g
+          intercept_val <- if (intercept) g[1] else NULL
+          note <- ""
+          pairs_txt <- if (length(nm_k) > 0) {
+            paste(sprintf("%s: %s", nm_k, round(covariate_vals, 3)), collapse = ", ")
+          } else {
+            ""
+          }
+        } else {
+          intercept_val <- if (intercept) NA_real_ else NULL
+          note <- "no covariates for this component"
+          pairs_txt <- ""
+        }
+        row <- list(Rank = paste0("R", k), Note = note)
+        if (intercept) row$Intercept <- intercept_val
+        row$Covariates <- pairs_txt
+        as.data.frame(row, stringsAsFactors = FALSE)
+      })
+      do.call(rbind, rows)
+    }
   }, na = "", digits = 3, striped = TRUE, bordered = TRUE)
 }
 ```
