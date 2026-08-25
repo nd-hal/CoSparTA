@@ -1,4 +1,5 @@
 using CoSparTA
+using DataFrames
 using Dates
 using LinearAlgebra
 using Random
@@ -151,4 +152,134 @@ end
     @test all(isfinite, demo_model.U2.mean)
     @test all(isfinite, demo_model.U3.mean)
     @test all(isfinite, reconstruct_tensor(demo_model))
+end
+
+@testset "dash_data" begin
+    @testset "name-keyed placement (union mode)" begin
+        gamma_list = [[0.1, 0.2], [0.3, 0.4]]
+        result = dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                            gamma_list=gamma_list, intercept=false,
+                            covariate_names=[["age", "income"], ["income", "region"]])
+        @test result.gamma_table_mode == :union
+        gt = result.gamma_table
+        rowA = gt[gt.Rank .== "R1", :]
+        rowB = gt[gt.Rank .== "R2", :]
+        @test rowA.age[1] == 0.1
+        @test rowA.income[1] == 0.2
+        @test ismissing(rowA.region[1])
+        @test ismissing(rowB.age[1])
+        @test rowB.income[1] == 0.3
+        @test rowB.region[1] == 0.4
+    end
+
+    @testset "heterogeneous overlapping covariate sets (union mode)" begin
+        gamma_list = [[0.1, 0.2, 0.3],      # comp1: age, income, region
+                      [0.4, 0.5],            # comp2: age, income
+                      [0.6, 0.7, 0.8]]       # comp3: income, region, tenure
+        covariate_names = [["age", "income", "region"],
+                            ["age", "income"],
+                            ["income", "region", "tenure"]]
+        result = dash_data(Ef=rand(4, 3), Ew=rand(3, 3), lambda=[1.0, 1.0, 1.0],
+                            gamma_list=gamma_list, intercept=false,
+                            covariate_names=covariate_names)
+        @test result.gamma_table_mode == :union
+        gt = result.gamma_table
+        @test Set(names(gt)) == Set(["Rank", "Note", "age", "income", "region", "tenure"])
+        @test length(names(gt)) == 6  # income and region each appear once, not duplicated
+
+        row1 = gt[gt.Rank .== "R1", :]
+        row2 = gt[gt.Rank .== "R2", :]
+        row3 = gt[gt.Rank .== "R3", :]
+
+        @test row1.age[1] == 0.1
+        @test row1.income[1] == 0.2
+        @test row1.region[1] == 0.3
+        @test ismissing(row1.tenure[1])
+
+        @test row2.age[1] == 0.4
+        @test row2.income[1] == 0.5  # comp2's 2nd value must land in "income", not "2nd column"
+        @test ismissing(row2.region[1])
+        @test ismissing(row2.tenure[1])
+
+        @test ismissing(row3.age[1])
+        @test row3.income[1] == 0.6  # comp3's 1st value must land in "income", not "1st column"
+        @test row3.region[1] == 0.7
+        @test row3.tenure[1] == 0.8
+    end
+
+    @testset "disjoint name sets (pairs mode)" begin
+        gamma_list = [[0.1, 0.2], [0.3, 0.4]]
+        result = dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                            gamma_list=gamma_list, intercept=false,
+                            covariate_names=[["age", "tenure"], ["income", "region"]])
+        @test result.gamma_table_mode == :pairs
+        @test "Covariates" in names(result.gamma_table)
+    end
+
+    @testset "unsupervised component note" begin
+        gamma_list = [[0.1, 0.2], nothing]
+        result = dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                            gamma_list=gamma_list, intercept=false,
+                            covariate_names=[["age", "tenure"], nothing])
+        gt = result.gamma_table
+        row2 = gt[gt.Rank .== "R2", :]
+        @test row2.Note[1] == "no covariates for this component"
+    end
+
+    @testset "intercept column presence" begin
+        with_int = dash_data(Ef=rand(4, 1), Ew=rand(3, 1), lambda=[1.0],
+                              gamma_list=[[1.5, 0.1, 0.2]], intercept=true,
+                              covariate_names=[["age", "income"]])
+        @test "Intercept" in names(with_int.gamma_table)
+        @test with_int.covariate_names[1] == ["age", "income"]
+
+        no_int = dash_data(Ef=rand(4, 1), Ew=rand(3, 1), lambda=[1.0],
+                            gamma_list=[[0.1, 0.2]], intercept=false,
+                            covariate_names=[["age", "income"]])
+        @test !("Intercept" in names(no_int.gamma_table))
+    end
+
+    @testset "intercept auto-detection" begin
+        gamma_list = [[0.1, 0.2, 0.3], nothing]
+        result = dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                            gamma_list=gamma_list, covariate_names=["a", "b", "c"])
+        @test result.intercept == false
+    end
+
+    @testset "vector-form names applied to all supervised components" begin
+        gamma_list = [[0.1, 0.2], [0.3, 0.4]]
+        result = dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                            gamma_list=gamma_list, intercept=false,
+                            covariate_names=["age", "income"])
+        @test result.covariate_names[1] == ["age", "income"]
+        @test result.covariate_names[2] == ["age", "income"]
+        @test result.gamma_table_mode == :union
+        gt = result.gamma_table
+        @test Set(names(gt)) == Set(["Rank", "Note", "age", "income"])
+    end
+
+    @testset "error cases" begin
+        @test_throws ErrorException dash_data(Ef=rand(4, 2))
+        @test_throws ErrorException dash_data(Ew=rand(3, 2), lambda=[1.0, 1.0])
+
+        gamma_list_uneven = [[0.1, 0.2], [0.3, 0.4, 0.5]]
+        @test_throws ErrorException dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                                               gamma_list=gamma_list_uneven, intercept=false,
+                                               covariate_names=["a", "b"])
+
+        @test_throws ErrorException dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                                               gamma_list=[[0.1, 0.2], [0.3, 0.4]], intercept=false,
+                                               covariate_names=[["a", "b"]])
+
+        @test_throws ErrorException dash_data(Ef=rand(4, 2), Ew=rand(3, 2), lambda=[1.0, 1.0],
+                                               gamma_list=[[0.1, 0.2], [0.3, 0.4]], intercept=false,
+                                               covariate_names=[["a", "b"], ["c"]])
+    end
+
+    @testset "fit path" begin
+        sim = simulate_tensor(n=30, p=8, w=6, K=2)
+        model = CoSparTA.fit(sim.X, 2; Xcov=sim.Xcov, verbose=false)
+        result = dash_data(fit=model)
+        @test result.gamma_table isa DataFrame
+    end
 end

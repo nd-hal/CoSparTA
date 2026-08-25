@@ -1,5 +1,6 @@
 module CoSparTA
 
+using DataFrames
 using Distributions
 using Dates
 using LinearAlgebra
@@ -21,6 +22,7 @@ export init_cpapr, select_covariates, match_factors, simulate_tensor
 export generate_missing_mask, evaluate_missing_prediction
 export get_pip, get_significant_patterns, get_posterior_quantile, get_gamma_ci
 export plot_time_factors, plot_channel_factors
+export dash_data
 
 include("types.jl")
 include("empirical_bayes.jl")
@@ -30,5 +32,6 @@ include("postprocessing.jl")
 include("missing.jl")
 include("inference.jl")
 include("visualization.jl")
+include("dash.jl")
 
 end
