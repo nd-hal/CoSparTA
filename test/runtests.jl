@@ -3,6 +3,7 @@ using DataFrames
 using Dates
 using LinearAlgebra
 using Random
+using Serialization
 using Test
 
 @testset "sparse kernels" begin
@@ -282,4 +283,64 @@ end
         result = dash_data(fit=model)
         @test result.gamma_table isa DataFrame
     end
+end
+
+@testset "dash launcher (no server)" begin
+    import Pluto
+
+    sim = simulate_tensor(n=30, p=8, w=6, K=2)
+    model = CoSparTA.fit(sim.X, 2; Xcov=sim.Xcov, verbose=false)
+    pl = dash_data(fit=model)
+
+    dir = mktempdir()
+    nb = CoSparTA._dash_prepare(pl, Pluto; dir=dir)
+
+    @test isfile(nb)
+    nb_text = read(nb, String)
+    @test startswith(nb_text, "### A Pluto.jl notebook ###")
+    @test !occursin("{{", nb_text)
+
+    @test try
+        open(nb) do io
+            Pluto.load_notebook_nobackup(io, nb)
+        end
+        true
+    catch
+        try
+            # fall back to a path-based signature if the io form is unavailable
+            Pluto.load_notebook_nobackup(nb)
+            true
+        catch
+            Pluto.load_notebook(nb)
+            true
+        end
+    end
+
+    payload_path = joinpath(dir, "cosparta_dash_payload.jls")
+    @test isfile(payload_path)
+    roundtripped = deserialize(payload_path)
+    @test roundtripped.K == 2
+
+    @test :dash in names(CoSparTA)
+end
+
+@testset "dash_stipple (no server)" begin
+    sim = simulate_tensor(n=30, p=8, w=6, K=2)
+    model = CoSparTA.fit(sim.X, 2; Xcov=sim.Xcov, verbose=false)
+    pl = dash_data(fit=model)
+
+    dir = mktempdir()
+    app = CoSparTA._dash_stipple_prepare(pl; dir=dir)
+
+    @test isfile(app)
+    app_text = read(app, String)
+    @test !occursin("{{PAYLOAD_PATH}}", app_text)
+    @test Meta.parseall(app_text) isa Expr
+
+    payload_path = joinpath(dir, "cosparta_dash_payload.jls")
+    @test isfile(payload_path)
+    roundtripped = deserialize(payload_path)
+    @test roundtripped.K == 2
+
+    @test :dash_stipple in names(CoSparTA)
 end

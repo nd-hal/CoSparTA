@@ -7,6 +7,7 @@ using LinearAlgebra
 using Optim
 using Random
 using RecipesBase
+using Serialization
 using SpecialFunctions
 using Statistics
 using Tables
@@ -22,7 +23,7 @@ export init_cpapr, select_covariates, match_factors, simulate_tensor
 export generate_missing_mask, evaluate_missing_prediction
 export get_pip, get_significant_patterns, get_posterior_quantile, get_gamma_ci
 export plot_time_factors, plot_channel_factors
-export dash_data
+export dash_data, dash, dash_stipple
 
 include("types.jl")
 include("empirical_bayes.jl")
